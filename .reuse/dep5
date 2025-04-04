@@ -1,0 +1,10 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Contact: Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>
+
+Files: poetry.lock
+Copyright: 2025 Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>
+License: CC0-1.0
+
+Files: renovate.json
+Copyright: 2025 Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>
+License: CC0-1.0
