@@ -62,6 +62,6 @@ class ELORanker(Ranker):
             K = self.K
         self.add_match(model_a_name, model_b_name, score=score, K=K)
 
-    def compute_ranks(self, matches: Iterable[Match]) -> None:
+    def compute_scores(self, matches: Iterable[Match]) -> None:
         for match in matches:
             self._add_match(match.model_a, match.model_b, score=match.score.value)

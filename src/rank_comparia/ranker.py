@@ -16,5 +16,9 @@ class Ranker(ABC):
         self.scale = scale
 
     @abstractmethod
-    def compute_ranks(self, matches: Iterable[Match]):
+    def compute_scores(self, matches: Iterable[Match]) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_scores(self) -> dict[str, float]:
         raise NotImplementedError()
