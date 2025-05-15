@@ -4,52 +4,56 @@
 
 from typing import Iterable, Literal
 
+from rank_comparia.match import Match
+from rank_comparia.ranker import Ranker
+
 
 def reciprocal_function(score_difference: float):
     return 1 / (1 + 10 ** (-score_difference / 400))
 
 
-class RankerELO:
+class ELORanker(Ranker):
 
-    def __init__(self, K=40):
-        self.players = {}
-        self.played_parties = {}
+    def __init__(self, scale=400, K: int = 40):
+        super().__init__(scale)
         self.K = K
+        # initialize models
+        self.players = {}
+        self.played_matches = {}
 
-    def add_player(self, player_name: str, score: float = 1000):
+    def add_player(self, player_name: str, score: float = 1000) -> None:
         self.players |= {player_name: score}
-        self.played_parties |= {player_name: 0}
+        self.played_matches |= {player_name: 0}
 
-    def add_players(self, player_names):
+    def add_players(self, player_names: list[str]) -> None:
         for player_name in player_names:
             self.add_player(player_name)
 
-    def get_all_rankings(self):
-        for player, ranking in sorted(self.players.items(), key=lambda x: -x[1]):
-            print(f"{player} : {ranking}")
+    def get_scores(self) -> dict[str, float]:
+        return {player: score for player, score in sorted(self.players.items(), key=lambda x: -x[1])}
 
-    def player_ranking(self, name: str) -> float:
+    def player_score(self, name: str) -> float:
         return self.players[name]
 
     def player_number_of_matches(self, name: str) -> int:
-        return self.played_parties[name]
+        return self.played_matches[name]
 
-    def add_match(self, player_a: str, player_b: str, score: Literal[0, 1, 2], K: float = 40):
+    def add_match(self, player_a: str, player_b: str, score: Literal[0, 1, 2], K: float = 40) -> None:
         """score : 0 -> b wins, 2 -> a wins, 1 -> draw"""
         W = score / 2.0
-        D = min(max(self.player_ranking(player_a) - self.player_ranking(player_b), -400), 400)
+        D = min(max(self.player_score(player_a) - self.player_score(player_b), -400), 400)
         pd = reciprocal_function(D)
         self.players[player_a] += K * (W - pd)
         self.players[player_b] += K * (pd - W)
-        self.played_parties[player_a] += 1
-        self.played_parties[player_b] += 1
+        self.played_matches[player_a] += 1
+        self.played_matches[player_b] += 1
 
-    def _add_match(self, model_a_name: str, model_b_name: str, score: Literal[0, 1, 2]):
+    def _add_match(self, model_a_name: str, model_b_name: str, score: Literal[0, 1, 2]) -> None:
         min_number_of_parties = min(
             self.player_number_of_matches(model_a_name),
             self.player_number_of_matches(model_b_name),
         )
-        max_elo = max(self.player_ranking(model_a_name), self.player_ranking(model_b_name))
+        max_elo = max(self.player_score(model_a_name), self.player_score(model_b_name))
         if max_elo > 2400:
             K = self.K / 4
         elif min_number_of_parties > 30:
@@ -58,13 +62,6 @@ class RankerELO:
             K = self.K
         self.add_match(model_a_name, model_b_name, score=score, K=K)
 
-    def compute_ranks(self, matches_list: Iterable[tuple[str, str, float, float]]):
-        for model_a_name, model_b_name, score_a, score_b in matches_list:
-            final_score = score_b - score_a
-            if final_score > 0:
-                score = 0
-            elif final_score < 0:
-                score = 2
-            else:
-                score = 1
-            self._add_match(model_a_name, model_b_name, score=score)
+    def compute_ranks(self, matches: Iterable[Match]) -> None:
+        for match in matches:
+            self._add_match(match.model_a, match.model_b, score=match.score.value)
