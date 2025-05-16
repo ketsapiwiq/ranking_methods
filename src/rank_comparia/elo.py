@@ -13,10 +13,12 @@ def reciprocal_function(score_difference: float):
 
 class ELORanker(Ranker):
 
-    def __init__(self, scale=400, K: int = 40):
+    def __init__(self, scale: int = 400, K: int = 40, reset: bool = True):
         super().__init__(scale)
         self.K = K
-        # initialize models
+        # reset scores when calling compute_scores
+        self.reset = reset
+        # initialize scores
         self.players = {}
         self.played_matches = {}
 
@@ -61,6 +63,13 @@ class ELORanker(Ranker):
             K = self.K
         self.add_match(model_a_name, model_b_name, score=score, K=K)
 
-    def compute_scores(self, matches: Iterable[Match]) -> None:
+    def compute_scores(self, matches: Iterable[Match]) -> dict[str, float]:
+        if self.reset:
+            # reset scores
+            players = list(self.players.keys())
+            self.players = {}
+            self.played_matches = {}
+            self.add_players(players)
         for match in matches:
             self._add_match(match.model_a, match.model_b, score=match.score.value)
+        return self.get_scores()

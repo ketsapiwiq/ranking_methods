@@ -51,7 +51,7 @@ class MaximumLikelihoodRanker(Ranker):
         all_counts = pl.concat([counts, reversed_counts]).group_by(["model_a_name", "model_b_name"]).sum()
         return all_counts
 
-    def compute_scores(self, matches: Iterable[Match]) -> None:
+    def compute_scores(self, matches: Iterable[Match]) -> dict[str, float]:
         all_counts = self.aggregate_matches(matches=matches)
         # models list
         models = all_counts["model_a_name"].unique().to_list()
@@ -83,7 +83,7 @@ class MaximumLikelihoodRanker(Ranker):
         scores = self.scale * lr.coef_[0] + self.INIT_RATING
 
         self.scores = {m: s for m, s in zip(models, scores)}
-        return
+        return self.get_scores()
 
     def get_scores(self) -> dict[str, float]:
         return {model: score for model, score in sorted(self.scores.items(), key=lambda x: -x[1])}
