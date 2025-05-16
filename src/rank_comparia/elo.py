@@ -12,7 +12,6 @@ def reciprocal_function(score_difference: float):
 
 
 class ELORanker(Ranker):
-
     def __init__(self, scale: int = 400, K: int = 40, reset: bool = True):
         super().__init__(scale)
         self.K = K

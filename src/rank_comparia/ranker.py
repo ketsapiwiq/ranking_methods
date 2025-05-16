@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from enum import Enum
 from random import choices
 
+import numpy as np
 import polars as pl
 from tqdm import tqdm
 
@@ -27,7 +28,6 @@ class Match:
 
 
 class Ranker(ABC):
-
     def __init__(self, scale: int = 400, bootstrap_samples: int = 100):
         super().__init__()
         self.bootstrap_samples = bootstrap_samples
@@ -51,19 +51,25 @@ class Ranker(ABC):
             for key, value in d.items():
                 aggregated[key].append(value)
 
-        # computie boostrap confidence intervals
+        # compute boostrap confidence intervals
         results = pl.DataFrame(aggregated)
 
-        stats = []
-        for model in results.columns:
-            model_scores = results[model]
-            stats.append(
-                {
-                    "model": model,
-                    "median": model_scores.median(),
-                    "p2.5": model_scores.quantile(0.025, interpolation="nearest"),
-                    "p97.5": model_scores.quantile(0.975, interpolation="nearest"),
-                }
+        bootstrap_column_names = [f"column_{index}" for index in range(self.bootstrap_samples)]
+        return (
+            results.transpose(include_header=True)
+            .select(model="column", value_array=pl.concat_list(*bootstrap_column_names))
+            .with_columns(
+                [
+                    pl.col("value_array")
+                    .map_elements(lambda x: float(np.median(x)), return_dtype=pl.Float64)
+                    .alias("median"),
+                    pl.col("value_array")
+                    .map_elements(lambda x: float(np.quantile(x, 0.025, method="nearest")), return_dtype=pl.Float64)
+                    .alias("p2.5"),
+                    pl.col("value_array")
+                    .map_elements(lambda x: float(np.quantile(x, 0.975, method="nearest")), return_dtype=pl.Float64)
+                    .alias("p97.5"),
+                ]
             )
-
-        return pl.DataFrame(stats)
+            .drop("value_array")
+        )

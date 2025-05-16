@@ -15,7 +15,6 @@ from rank_comparia.ranker import Match, Ranker
 
 
 class MaximumLikelihoodRanker(Ranker):
-
     BASE = 10
     INIT_RATING = 1000
 
