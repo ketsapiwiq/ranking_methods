@@ -4,9 +4,22 @@
 
 """Base ranker class."""
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from enum import Enum
 from typing import Iterable
 
-from rank_comparia.match import Match
+
+class MatchScore(int, Enum):
+    A = 2
+    B = 0
+    Draw = 1
+
+
+@dataclass
+class Match:
+    model_a: str
+    model_b: str
+    score: MatchScore
 
 
 class Ranker(ABC):

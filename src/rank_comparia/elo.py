@@ -4,8 +4,7 @@
 
 from typing import Iterable, Literal
 
-from rank_comparia.match import Match
-from rank_comparia.ranker import Ranker
+from rank_comparia.ranker import Match, Ranker
 
 
 def reciprocal_function(score_difference: float):

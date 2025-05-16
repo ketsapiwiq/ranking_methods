@@ -11,8 +11,7 @@ import numpy as np
 import polars as pl
 from sklearn.linear_model import LogisticRegression
 
-from rank_comparia.match import Match
-from rank_comparia.ranker import Ranker
+from rank_comparia.ranker import Match, Ranker
 
 
 class MaximumLikelihoodRanker(Ranker):
