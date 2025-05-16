@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-from pathlib import Path
-
 import polars as pl
 
 
@@ -11,16 +9,9 @@ POSITIVE_COLUMNS = ["liked", "useful", "creative", "clear_formatting"]
 NEGATIVE_COLUMNS = ["disliked", "incorrect", "superficial", "instructions_not_followed"]
 
 
-def get_matches_with_score(reaction_path: Path):
-    comparia_reactions = (
-        pl.read_parquet(reaction_path)
-        .sort("timestamp")
-        .with_columns(
-            *[
-                pl.col(bool_to_zero).fill_null(value=False).cast(int)
-                for bool_to_zero in POSITIVE_COLUMNS + NEGATIVE_COLUMNS
-            ]
-        )
+def get_matches_with_score(reactions: pl.DataFrame):
+    comparia_reactions = reactions.sort("timestamp").with_columns(
+        *[pl.col(bool_to_zero).fill_null(value=False).cast(int) for bool_to_zero in POSITIVE_COLUMNS + NEGATIVE_COLUMNS]
     )
     likability_score = pl.sum_horizontal(*POSITIVE_COLUMNS) - pl.sum_horizontal(*NEGATIVE_COLUMNS)
     return (
