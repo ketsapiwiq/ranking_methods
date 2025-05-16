@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from enum import Enum
 from random import choices
 
-import numpy as np
 import polars as pl
 from tqdm import tqdm
 
@@ -60,14 +59,14 @@ class Ranker(ABC):
             .select(model="column", value_array=pl.concat_list(*bootstrap_column_names))
             .with_columns(
                 [
+                    pl.col("value_array").list.median().alias("median"),
                     pl.col("value_array")
-                    .map_elements(lambda x: float(np.median(x)), return_dtype=pl.Float64)
-                    .alias("median"),
-                    pl.col("value_array")
-                    .map_elements(lambda x: float(np.quantile(x, 0.025, method="nearest")), return_dtype=pl.Float64)
+                    .list.eval(pl.element().quantile(0.025, interpolation="nearest"))
+                    .list.first()
                     .alias("p2.5"),
                     pl.col("value_array")
-                    .map_elements(lambda x: float(np.quantile(x, 0.975, method="nearest")), return_dtype=pl.Float64)
+                    .list.eval(pl.element().quantile(0.975, interpolation="nearest"))
+                    .list.first()
                     .alias("p97.5"),
                 ]
             )
