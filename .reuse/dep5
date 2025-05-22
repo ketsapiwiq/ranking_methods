@@ -5,10 +5,18 @@ Files: poetry.lock
 Copyright: 2025 Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>
 License: CC0-1.0
 
+Files: data/models_data.json
+Copyright: 2025 Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>
+License: CC0-1.0
+
 Files: renovate.json
 Copyright: 2025 Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>
 License: CC0-1.0
 
 Files: notebooks/comparia.ipynb
+Copyright: 2025 Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>
+License: CC0-1.0
+
+Files: notebooks/frugal.ipynb
 Copyright: 2025 Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>
 License: CC0-1.0
