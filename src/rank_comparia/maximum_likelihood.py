@@ -16,10 +16,11 @@ from rank_comparia.ranker import Match, Ranker
 
 class MaximumLikelihoodRanker(Ranker):
     BASE = 10
-    INIT_RATING = 1000
 
-    def __init__(self, scale: int = 400, max_iter: int = 200):
-        super().__init__(scale)
+    def __init__(
+        self, scale: int = 400, default_score: float = 1000.0, bootstrap_samples: int = 100, max_iter: int = 300
+    ):
+        super().__init__(scale, default_score, bootstrap_samples)
         self.max_iter = max_iter
         self.scores = {}
 
@@ -79,7 +80,7 @@ class MaximumLikelihoodRanker(Ranker):
         # fit logistic regression
         lr = LogisticRegression(fit_intercept=False, penalty=None, tol=1e-6, max_iter=self.max_iter)  # type: ignore
         lr.fit(X, Y, sample_weight=sample_weights)
-        scores = self.scale * lr.coef_[0] + self.INIT_RATING
+        scores = self.scale * lr.coef_[0] + self.default_score
 
         self.scores = {m: s for m, s in zip(models, scores)}
         return self.get_scores()

@@ -24,13 +24,15 @@ class Match:
     model_a: str
     model_b: str
     score: MatchScore
+    id: str | None = None
 
 
 class Ranker(ABC):
-    def __init__(self, scale: int = 400, bootstrap_samples: int = 100):
+    def __init__(self, scale: int = 400, default_score: float = 1000.0, bootstrap_samples: int = 100):
         super().__init__()
-        self.bootstrap_samples = bootstrap_samples
         self.scale = scale
+        self.default_score = default_score
+        self.bootstrap_samples = bootstrap_samples
 
     @abstractmethod
     def compute_scores(self, matches: list[Match]) -> dict[str, float]:
@@ -41,14 +43,25 @@ class Ranker(ABC):
         raise NotImplementedError()
 
     def compute_bootstrap_scores(self, matches: list[Match]) -> pl.DataFrame:
+        # TODO: proper logging
+        print(f"Computing bootstrap scores from a sample of {len(matches)} matches.")
         rows = []
+        all_keys = set()
         for _ in tqdm(range(self.bootstrap_samples), desc="Processing bootstrap samples"):
-            rows.append(self.compute_scores(choices(matches, k=len(matches))))
+            scores = self.compute_scores(choices(matches, k=len(matches)))
+            rows.append(scores)
+            all_keys.update(scores.keys())
 
+        # fill missing keys with default score
+        for d in rows:
+            for key in all_keys:
+                d.setdefault(key, self.default_score)
+
+        # aggregate
         aggregated = defaultdict(list)
         for d in rows:
-            for key, value in d.items():
-                aggregated[key].append(value)
+            for key in all_keys:
+                aggregated[key].append(d[key])
 
         # compute boostrap confidence intervals
         results = pl.DataFrame(aggregated)
@@ -71,4 +84,5 @@ class Ranker(ABC):
                 ]
             )
             .drop("value_array")
+            .sort("median", descending=True)
         )
