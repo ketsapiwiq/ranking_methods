@@ -4,26 +4,21 @@ SPDX-FileCopyrightText: 2025 Pôle d'Expertise de la Régulation Numérique <con
 SPDX-License-Identifier: MIT
 -->
 
-# rank-comparia
-
-
+# Méthode de classement pour les modèles issus du comparateur compar:IA
 
 ## Description
 
-**TODO[squelette]: Remplacer cette section par un paragraphe de description du projet.**
+Ce projet consiste en un POC permettant de calculer d'une part un classement des modèles de langue utilisés dans le comparateur public d'IA conversationnelle [compar:IA](https://comparia.beta.gouv.fr/), et d'autre part d'estimer le coût écologique de ces modèles.
 
-Calcule des rangs pour le projet comparia
+Ce projet est en développement et sera mis régulièrement à jour.
 
 ## Installation
 
-**TODO[squelette]: Relire et compléter les étapes d'installation.**
 
 ```bash
 # Récupération du code avec Git
 git clone ${GITLAB_URL}
 cd rank-comparia
-
-
 
 # Installation des dépendances et du projet via poetry
 # (poetry se chargera également de créer un environnement virtuel pour vous,
@@ -32,23 +27,42 @@ cd rank-comparia
 poetry install
 ```
 
+## Données utilisées
+
+Les données utilisées pour ce projet sont trois jeux de données, mis à disposition par le SNUM du Ministère de la culture et disponibles sur HuggingFace :
+- [ministere-culture/comparia-conversations](https://huggingface.co/datasets/ministere-culture/comparia-conversations), utilisé pour récupérer les permettant de calculer la consommation énergétique
+- [ministere-culture/comparia-reactions](https://huggingface.co/datasets/ministere-culture/comparia-reactions), utilisé pour établir le classement des modèles basé sur les réactions laissées par les utilisateurs au sein des conversations
+- [ministere-culture/comparia-votes](https://huggingface.co/datasets/ministere-culture/comparia-votes), utilisé utilisé pour établir le classement des modèles basé sur les votes des utilisateurs à la fin des conversations
+
 
 ## Utilisation
 
-**TODO[squelette]: Décrire comment utiliser le code ("_getting started_").**
+Voir les notebooks dans le dossier `notebooks/` pour avoir des exemples d'utilisation.
 
+Le notebook `comparia.ipynb` permet de calculer les différentes méthodes de classement des modèles. 
+Le notebook `frugal.ipynb` permet de calculer en plus la consommation estimée des modèles et de construire une représentation graphique du score de classement en fonction de sa consommation.
+Le notebook `pipeline.ipynb` qui illustre l'utilisation de l'interface `RankingPipeline`
+
+Les fonctions utilisées dans les notebooks se trouvent dans `src/rank_comparia/` :
+- Les méthodes de calcul de classement se trouvent dans les fichiers `elo.py`, `maximum_likelihood.py`. `ranker.py` est la classe générique.
+- Les méthodes de calcul de la consommation énergétique se trouvent dans `frugality.py`
+- Une pipeline bout en bout est en construction dans `pipeline.py`. Elle inclut pour le moment les méthodes de classement selon différents paramètres (quelle méthode de classement, calcul par batch, quel jeu de données à utiliser, etc.)
+
+
+
+## Tests
+```bash
+poetry run pytest tests/
+```
 
 
 ## Contribution
-
 
 Avant de contribuer au dépôt, il est nécessaire d'initialiser les _hooks_ de _pre-commit_ :
 
 ```bash
 poetry run pre-commit install
 ```
-
-
 
 <!--
 ***** TODO[squelette] ****
