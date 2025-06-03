@@ -14,6 +14,10 @@ from tqdm import tqdm
 
 
 class MatchScore(int, Enum):
+    """
+    Match score Enum.
+    """
+
     A = 2
     B = 0
     Draw = 1
@@ -21,6 +25,10 @@ class MatchScore(int, Enum):
 
 @dataclass
 class Match:
+    """
+    Match class.
+    """
+
     model_a: str
     model_b: str
     score: MatchScore
@@ -28,7 +36,19 @@ class Match:
 
 
 class Ranker(ABC):
+    """
+    Base ranker class.
+    """
+
     def __init__(self, scale: int = 400, default_score: float = 1000.0, bootstrap_samples: int = 100):
+        """
+        Constructor.
+
+        Args:
+            scale (int): Scale parameter.
+            default_score (float): Base score used.
+            bootstrap_samples (int): Number of bootstrap samples.
+        """
         super().__init__()
         self.scale = scale
         self.default_score = default_score
@@ -36,13 +56,37 @@ class Ranker(ABC):
 
     @abstractmethod
     def compute_scores(self, matches: list[Match]) -> dict[str, float]:
+        """
+        Compute scores from a list of matches.
+
+        Args:
+            matches (list[Match]): List of matches.
+
+        Returns:
+            dict[str, float]: Dictionary mapping model names to float scores.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def get_scores(self) -> dict[str, float]:
+        """
+        Return computed scores.
+
+        Returns:
+            dict[str, float]: Dictionary mapping model names to float scores.
+        """
         raise NotImplementedError()
 
     def compute_bootstrap_scores(self, matches: list[Match]) -> pl.DataFrame:
+        """
+        Compute bootstrap scores from a list of matches.
+
+        Args:
+            matches (list[Match]): List of matches.
+
+        Returns:
+            pl.DataFrame: DataFrame containing bootstrap scores and confidence intervals.
+        """
         # TODO: proper logging
         print(f"Computing bootstrap scores from a sample of {len(matches)} matches.")
         rows = []

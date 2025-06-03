@@ -6,8 +6,18 @@ import altair as alt
 import polars as pl
 
 
-def calculate_frugality_score(conversations: pl.DataFrame, n_match: pl.DataFrame, mean: bool):
+def calculate_frugality_score(conversations: pl.DataFrame, n_match: pl.DataFrame, mean: bool) -> pl.DataFrame:
+    """
+    Calculate a frugality score by model from conversations data.
 
+    Args:
+        conversations (pl.DataFrame): Conversations data.
+        n_match (pl.DataFrame): Data with the number of matches by model.
+        mean (bool): If True, compute mean energy consumption per conversation.
+
+    Returns:
+        pl.DataFrame: DataFrame with frugality scores.
+    """
     frugal_score = (
         pl.concat(
             [
@@ -30,7 +40,18 @@ def calculate_frugality_score(conversations: pl.DataFrame, n_match: pl.DataFrame
 
 
 def draw_chart(frugality_infos: pl.DataFrame, title: str, log: bool = False, mean: bool = False) -> alt.Chart:
+    """
+    Draw chart displaying Elo/BT scores against frugality scores.
 
+    Args:
+        frugality_infos (pl.DataFrame): DataFrame with frugality scores.
+        title (str): Chart title.
+        log (bool): Whether or not to use a log scale.
+        mean (bool): Whether or not to display total consumption or consumption per conversation.
+
+    Returns:
+        alt.Chart: Chart displaying Elo/BT scores against frugality scores.
+    """
     x_column = "mean_conso" if mean else "conso_all_conv"
 
     return (

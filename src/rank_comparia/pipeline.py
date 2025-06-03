@@ -17,14 +17,17 @@ from rank_comparia.utils import categories, load_comparia
 
 @dataclass
 class RankingPipeline:
+    """
+    Ranking pipeline class.
+    """
 
-    method: Literal["elo_ordered", "elo_random", "ml"]
-    include_votes: bool
-    include_reactions: bool
-    bootstrap_samples: int
-    batch: bool
-    export_graphs: bool
-    ranker: Ranker = field(init=False)
+    method: Literal["elo_ordered", "elo_random", "ml"]  # score computation method used
+    include_votes: bool  # whether to include votes dataset in raw match data
+    include_reactions: bool  # whether to include reactions dataset in raw match data
+    bootstrap_samples: int  # number of bootstrap samples
+    batch: bool  # whether or not to batch matches together before computing score
+    export_graphs: bool  # whether or not to export graphs
+    ranker: Ranker = field(init=False)  # ranker
 
     def __post_init__(self):
         if not (self.include_votes | self.include_reactions):
@@ -39,15 +42,40 @@ class RankingPipeline:
         self.matches = self._process_data()
 
     def run(self) -> pl.DataFrame:
+        """
+        Run bootstrap score computation.
+
+        Returns:
+            pl.DataFrame: Bootstrap scores.
+        """
         matches = self.match_list()
         return self.ranker.compute_bootstrap_scores(matches=matches)
 
     def run_category(self, category: str) -> pl.DataFrame:
+        """
+        Run bootstrap score computation for a specific conversation topic.
+
+        Args:
+            category (str): Category.
+
+        Returns:
+            pl.DataFrame: Bootstrap scores for the provided category.
+        """
         # filter matches
         matches = self.match_list(category=category)
         return self.ranker.compute_bootstrap_scores(matches=matches)
 
     def run_all_categories(self, min_matches: int = 5000) -> dict[str, pl.DataFrame]:
+        """
+        Run bootstrap score computation for a all conversation topics with
+        more than `min_matches` matches.
+
+        Args:
+            min_matches (int): Threshold on the number of matches to compute scores.
+
+        Returns:
+            dict[str, pl.DataFrame]: Bootstrap scores by category.
+        """
         results = {}
         for category in categories:
             matches = self.match_list(category=category)
@@ -58,6 +86,15 @@ class RankingPipeline:
         return results
 
     def match_list(self, category: str | None = None) -> list[Match]:
+        """
+        Return all matches, or matches for the provided category, as a list of `Match` objects.
+
+        Args:
+            category (str | None): Optional category.
+
+        Returns:
+            list[Match]: List of matches.
+        """
         if category is None:
             matches = self.matches
         else:
@@ -72,6 +109,12 @@ class RankingPipeline:
         ]
 
     def _process_data(self) -> pl.DataFrame:
+        """
+        Process raw data.
+
+        Returns:
+            pl.DataFrame: Formatted data.
+        """
         matches = []
         if self.include_votes:
             matches.append(self._process_votes_data())
@@ -80,6 +123,12 @@ class RankingPipeline:
         return pl.concat(matches, how="vertical")
 
     def _process_votes_data(self) -> pl.DataFrame:
+        """
+        Process raw votes data.
+
+        Returns:
+            pl.DataFrame: Formatted votes data.
+        """
         data = load_comparia("ministere-culture/comparia-votes")
         # drop duplicates
         data = data.unique(subset="conversation_pair_id", keep="first")
@@ -110,6 +159,12 @@ class RankingPipeline:
         )
 
     def _process_reactions_data(self) -> pl.DataFrame:
+        """
+        Process raw reactions data.
+
+        Returns:
+            pl.DataFrame: Formatted reactions data.
+        """
         # load data
         data = load_comparia("ministere-culture/comparia-reactions")
 

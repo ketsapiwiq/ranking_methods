@@ -12,13 +12,31 @@ import polars as pl
 from rank_comparia.frugality import draw_chart
 
 
-def save_chart(data: pl.DataFrame, title: str, log: bool, save_path: Path):
+def save_chart(data: pl.DataFrame, title: str, log: bool, save_path: Path) -> None:
+    """
+    Save a specific altair chart as an html file.
+    TODO: make this function generic.
+
+    Args:
+        data (pl.DataFrame): DataFrame. For now this has to be 'frugality' data.
+        title (str): File name.
+        log (bool): Whether or not to use a log scale.
+        save_path (Path): Repository.
+    """
     chart = draw_chart(data, title=title, log=log)
     file_friendly_title = "_".join(title.split())
     chart.save(fp=save_path / f"{file_friendly_title}.html", format="html")
 
 
-def save_data(data: pl.DataFrame, title: str, save_path: Path):
+def save_data(data: pl.DataFrame, title: str, save_path: Path) -> None:
+    """
+    Save polars DataFrame as a csv file.
+
+    Args:
+        data (pl.DataFrame): DataFrame with all infos calculated.
+        title (str): File name.
+        save_path (Path): Repository.
+    """
     data.write_csv(file=save_path / f"{title}.csv", separator=";")
 
 
@@ -28,6 +46,19 @@ def load_comparia(
         "ministere-culture/comparia-votes",
     ]
 ) -> pl.DataFrame:
+    """
+    Load `comparia-reactions` or `comparia-votes` as a polars DataFrame
+    with a category field coming from `comparia-conversations`.
+
+    Args:
+        repository (Literal[
+            "ministere-culture/comparia-reactions",
+            "ministere-culture/comparia-votes",
+        ]): HF repository name.
+
+    Returns:
+        pl.DataFrame: Dataset.
+    """
     # environment variable HF_DATASETS_CACHE must be set
     # and authentication to the hub is necessary
     data = datasets.load_dataset(
@@ -47,6 +78,7 @@ def load_comparia(
     return data  # type: ignore
 
 
+# List of categories in the `comparia-conversation` dataset
 categories: list[str] = [
     "Education",
     "Arts",

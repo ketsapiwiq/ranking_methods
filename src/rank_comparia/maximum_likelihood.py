@@ -5,7 +5,6 @@
 """Alternative maximum likelihood ranker."""
 
 import math
-from typing import Iterable
 
 import numpy as np
 import polars as pl
@@ -15,17 +14,39 @@ from rank_comparia.ranker import Match, Ranker
 
 
 class MaximumLikelihoodRanker(Ranker):
+    """
+    Maximum Likelihood Ranker.
+    """
+
     BASE = 10
 
     def __init__(
         self, scale: int = 400, default_score: float = 1000.0, bootstrap_samples: int = 100, max_iter: int = 300
     ):
+        """
+        Constructor.
+
+        Args:
+            scale (int): Scale parameter.
+            default_score (float): Base score used.
+            bootstrap_samples (int): Number of bootstrap samples.
+            max_iter (int): Max number of iterations for the LBFGS optimizer.
+        """
         super().__init__(scale, default_score, bootstrap_samples)
         self.max_iter = max_iter
         self.scores = {}
 
     @staticmethod
-    def aggregate_matches(matches: Iterable[Match]) -> pl.DataFrame:
+    def aggregate_matches(matches: list[Match]) -> pl.DataFrame:
+        """
+        Aggregate a list of matches in a polars DataFrame.
+
+        Args:
+            list[Match]: List of matches.
+
+        Returns:
+            pl.DataFrame: DataFrame with the number of wins on each side for all pairwise combinations of models.
+        """
         # store match list in dataframe
         model_a, model_b, score = zip(*((match.model_a, match.model_b, match.score.value) for match in matches))
         df = (
@@ -51,7 +72,16 @@ class MaximumLikelihoodRanker(Ranker):
         all_counts = pl.concat([counts, reversed_counts]).group_by(["model_a_name", "model_b_name"]).sum()
         return all_counts
 
-    def compute_scores(self, matches: Iterable[Match]) -> dict[str, float]:
+    def compute_scores(self, matches: list[Match]) -> dict[str, float]:
+        """
+        Compute scores from a list of matches.
+
+        Args:
+            matches (list[Match]): List of matches.
+
+        Returns:
+            dict[str, float]: Dictionary mapping model names to float scores.
+        """
         all_counts = self.aggregate_matches(matches=matches)
         # models list
         models = all_counts["model_a_name"].unique().to_list()
@@ -86,4 +116,10 @@ class MaximumLikelihoodRanker(Ranker):
         return self.get_scores()
 
     def get_scores(self) -> dict[str, float]:
+        """
+        Return computed scores.
+
+        Returns:
+            dict[str, float]: Dictionary mapping model names to float scores.
+        """
         return {model: score for model, score in sorted(self.scores.items(), key=lambda x: -x[1])}
