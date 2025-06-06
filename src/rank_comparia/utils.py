@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-import os
 from pathlib import Path
 from typing import Literal
 
@@ -44,11 +43,13 @@ def load_comparia(
     repository: Literal[
         "ministere-culture/comparia-reactions",
         "ministere-culture/comparia-votes",
-    ]
+    ],
+    **kwargs,
 ) -> pl.DataFrame:
     """
     Load `comparia-reactions` or `comparia-votes` as a polars DataFrame
     with a category field coming from `comparia-conversations`.
+    Extra keyword arguments will be forwarded to `datasets.load_dataset`.
 
     Args:
         repository (Literal[
@@ -59,20 +60,18 @@ def load_comparia(
     Returns:
         pl.DataFrame: Dataset.
     """
-    # environment variable HF_DATASETS_CACHE must be set
+    # environment variable HF_HOME must be set
     # and authentication to the hub is necessary
     data = datasets.load_dataset(
         repository,
-        cache_dir=os.environ["HF_DATASETS_CACHE"],
         split="train",
+        **kwargs,
     ).to_polars()  # type: ignore
     # add categories column
     conversations = (
-        datasets.load_dataset(
-            "ministere-culture/comparia-conversations", cache_dir=os.environ["HF_DATASETS_CACHE"], split="train"
-        )
+        datasets.load_dataset("ministere-culture/comparia-conversations", split="train", **kwargs)
         .to_polars()  # type: ignore
-        .select(["conversation_pair_id", "categories"])  # type: ignore
+        .select(["conversation_pair_id", "categories", "total_conv_a_kwh", "total_conv_b_kwh"])  # type: ignore
     )
     data = data.join(conversations, on="conversation_pair_id")  # type: ignore
     return data  # type: ignore
