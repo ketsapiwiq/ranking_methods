@@ -16,3 +16,12 @@ License: CC0-1.0
 Files: notebooks/*.ipynb
 Copyright: 2025 Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>
 License: CC0-1.0
+
+Files: tests/data/test_data.parquet
+Copyright: 2025 Ministère de la Culture
+License: etalab-2.0
+Comment: Ce jeu de données test est dérivé du jeu de données ComparIA : https://huggingface.co/ministere-culture
+
+Files: tests/data/test_data_frugal.parquet
+Copyright: 2025 Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>
+License: CC0-1.0

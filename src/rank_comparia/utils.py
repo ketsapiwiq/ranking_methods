@@ -11,7 +11,9 @@ import polars as pl
 from rank_comparia.frugality import draw_chart
 
 
-def save_chart(data: pl.DataFrame, title: str, log: bool, save_path: Path) -> None:
+def save_chart(
+    data: pl.DataFrame, title: str, log: bool, mean: bool, scale: Literal["match", "token"] | None, save_path: Path
+) -> None:
     """
     Save a specific altair chart as an html file.
     TODO: make this function generic.
@@ -19,10 +21,12 @@ def save_chart(data: pl.DataFrame, title: str, log: bool, save_path: Path) -> No
     Args:
         data (pl.DataFrame): DataFrame. For now this has to be 'frugality' data.
         title (str): File name.
+        mean (bool): Whether or not to display total consumption or mean consumption.
+        scale (Literal) : Select to plot mean_per_token or mean_per_match if mean=True
         log (bool): Whether or not to use a log scale.
         save_path (Path): Repository.
     """
-    chart = draw_chart(data, title=title, log=log)
+    chart = draw_chart(data, title=title, scale=scale, log=log, mean=mean)
     file_friendly_title = "_".join(title.split())
     chart.save(fp=save_path / f"{file_friendly_title}.html", format="html")
 
@@ -62,19 +66,31 @@ def load_comparia(
     """
     # environment variable HF_HOME must be set
     # and authentication to the hub is necessary
-    data = datasets.load_dataset(
+    data: pl.DataFrame = datasets.load_dataset(
         repository,
         split="train",
         **kwargs,
     ).to_polars()  # type: ignore
+
     # add categories column
-    conversations = (
-        datasets.load_dataset("ministere-culture/comparia-conversations", split="train", **kwargs)
-        .to_polars()  # type: ignore
-        .select(["conversation_pair_id", "categories", "total_conv_a_kwh", "total_conv_b_kwh"])  # type: ignore
+    conversations: pl.DataFrame = datasets.load_dataset(
+        "ministere-culture/comparia-conversations", split="train", **kwargs
+    ).to_polars()  # type: ignore
+    conversations = conversations.select(
+        [
+            "conversation_pair_id",
+            "categories",
+            "model_a_active_params",
+            "total_conv_a_output_tokens",
+            "total_conv_a_kwh",
+            "model_b_active_params",
+            "total_conv_b_output_tokens",
+            "total_conv_b_kwh",
+        ]
     )
-    data = data.join(conversations, on="conversation_pair_id")  # type: ignore
-    return data  # type: ignore
+    data = data.join(conversations, on="conversation_pair_id")
+
+    return data
 
 
 # List of categories in the `comparia-conversation` dataset
