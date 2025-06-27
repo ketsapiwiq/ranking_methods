@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-from typing import Literal
+from typing import Literal, Optional
 
 import altair as alt
 import polars as pl
@@ -66,7 +66,7 @@ def get_n_match(ranker_score: ELORanker):
     ).sort(by="model_name")
 
 
-def calculate_frugality_score(conversations: pl.DataFrame, n_match: pl.DataFrame, mean: bool):
+def calculate_frugality_score(conversations: pl.DataFrame, n_match: Optional[pl.DataFrame], mean: bool):
     """
     Calculate a frugality score by model from conversations data.
 
@@ -82,8 +82,16 @@ def calculate_frugality_score(conversations: pl.DataFrame, n_match: pl.DataFrame
     frugal_score = (
         pl.concat(
             [
-                conversations.select(model_name=pl.col("model_a_name"), conso_all_conv=pl.col("total_conv_a_kwh")),
-                conversations.select(model_name=pl.col("model_b_name"), conso_all_conv=pl.col("total_conv_b_kwh")),
+                conversations.select(
+                    total_output_tokens=pl.col("total_conv_a_output_tokens"),
+                    model_name=pl.col("model_a_name"),
+                    conso_all_conv=pl.col("total_conv_a_kwh"),
+                ),
+                conversations.select(
+                    total_output_tokens=pl.col("total_conv_b_output_tokens"),
+                    model_name=pl.col("model_b_name"),
+                    conso_all_conv=pl.col("total_conv_b_kwh"),
+                ),
             ]
         )
         .group_by("model_name")
@@ -92,15 +100,64 @@ def calculate_frugality_score(conversations: pl.DataFrame, n_match: pl.DataFrame
         .drop_nulls()
     )
 
-    frugal_score = frugal_score.join(n_match, on="model_name")
+    if n_match is not None:
+        frugal_score = frugal_score.join(n_match, on="model_name")
+        if mean:
+            frugal_score = frugal_score.with_columns(
+                mean_conso_per_match=pl.col("conso_all_conv") / pl.col("n_match"),
+            )
 
     if mean:
         frugal_score = frugal_score.with_columns(
-            mean_conso_per_match=pl.col("conso_all_conv") / pl.col("n_match"),
             mean_conso_per_token=pl.col("conso_all_conv") / pl.col("total_output_tokens"),
-        )
+        ).drop_nans()
 
     return frugal_score
+
+
+def get_normalized_log_cost(frugal_score: pl.DataFrame) -> pl.DataFrame:
+    log_frugality = frugal_score.with_columns(log_cost=pl.col("mean_conso_per_token").log(base=10))
+    median_score = log_frugality.median().item(0, "log_cost")
+    return log_frugality.select(model=pl.col("model_name"), cost=pl.col("log_cost") - pl.lit(median_score))
+
+
+def draw_ranked_frugality(frugal_log_score: pl.DataFrame, bootstraped_scores: pl.DataFrame):
+    """
+    Draw chart displaying Elo scores against Elo score adjusted for frugality.
+
+    Args:
+        frugal_log_score (pl.DataFrame): DataFrame with frugality score.
+
+    Returns:
+        alt.Chart: chart displaying Elo scores against Elo score adjusted for frugality.
+    """
+    all_data = bootstraped_scores.select(["model", "median"]).join(frugal_log_score, on="model")
+    all_data_frugal = all_data.with_columns(frugal=(pl.col("median") - 366 * pl.col("cost")))
+    max_frugal = all_data_frugal.max().item(0, "frugal") // 100 * 100 + 100
+    min_frugal = all_data_frugal.min().item(0, "frugal") // 100 * 100
+    max_elo = all_data_frugal.max().item(0, "median") // 100 * 100 + 100
+    min_elo = all_data_frugal.min().item(0, "median") // 100 * 100
+
+    bind_range = alt.binding_range(min=0, max=1, name="frugality coefficient:  ")
+    param_width = alt.param(bind=bind_range, value=1)
+
+    x = alt.X("median").title("elo score").scale(type="linear").scale(domainMin=min_elo, domainMax=max_elo)
+    y = alt.Y("y:Q").title("frugality elo score").scale(domainMin=min_frugal, domainMax=max_frugal)
+    return (
+        alt.Chart(all_data)
+        .mark_point(tooltip=True)
+        .encode(x=x, y=y, color=alt.Color("model:N"))
+        .add_params(
+            param_width,
+        )
+        .transform_calculate(
+            y=alt.datum.median - param_width * (alt.datum.cost * 366)
+        )  # 366 is the difference of score for 90% winrate for ELO
+        .properties(width=800, height=450, title="frugality elo ranking")
+        .configure_legend(
+            labelLimit=300,
+        )
+    )
 
 
 def draw_chart(

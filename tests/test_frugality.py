@@ -21,8 +21,13 @@ def test_calculate_frugal_score():
     n_match = pl.read_parquet("tests/data/test_data_frugal.parquet")
     frugality_score = calculate_frugality_score(data, n_match, mean=False)
     assert round(frugality_score[0, "conso_all_conv"], ndigits=5) == 0.01698
-    assert len(frugality_score.columns) == 4
+    assert len(frugality_score.columns) == 5
     frugality_score = calculate_frugality_score(data, n_match, mean=True)
     assert round(frugality_score[0, "mean_conso_per_match"], ndigits=5) == 0.00849
     assert round(frugality_score[0, "mean_conso_per_token"], ndigits=6) == 0.000008
-    assert len(frugality_score.columns) == 6
+    assert len(frugality_score.columns) == 7
+    frugality_score = calculate_frugality_score(data, n_match=None, mean=True)
+    assert len(frugality_score.columns) == 4
+    assert "mean_conso_per_match" not in frugality_score.columns
+    assert round(frugality_score[0, "mean_conso_per_token"], ndigits=6) == 0.000134
+    assert round(frugality_score[0, "total_output_tokens"]) == 421
