@@ -83,6 +83,7 @@ linting:
   stage: test
   needs: []
 
+# Dirty uninstall to have polars working on all workers
 test:
   extends: .test
   rules:
