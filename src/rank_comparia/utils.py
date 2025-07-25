@@ -8,28 +8,6 @@ from typing import Literal
 import datasets
 import polars as pl
 
-from rank_comparia.frugality import draw_chart
-
-
-def save_chart(
-    data: pl.DataFrame, title: str, log: bool, mean: bool, scale: Literal["match", "token"] | None, save_path: Path
-) -> None:
-    """
-    Save a specific altair chart as an html file.
-    TODO: make this function generic.
-
-    Args:
-        data (pl.DataFrame): DataFrame. For now this has to be 'frugality' data.
-        title (str): File name.
-        mean (bool): Whether or not to display total consumption or mean consumption.
-        scale (Literal) : Select to plot mean_per_token or mean_per_match if mean=True
-        log (bool): Whether or not to use a log scale.
-        save_path (Path): Repository.
-    """
-    chart = draw_chart(data, title=title, scale=scale, log=log, mean=mean)
-    file_friendly_title = "_".join(title.split())
-    chart.save(fp=save_path / f"{file_friendly_title}.html", format="html")
-
 
 def save_data(data: pl.DataFrame, title: str, save_path: Path) -> None:
     """

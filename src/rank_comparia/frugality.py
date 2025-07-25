@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+from pathlib import Path
 from typing import Literal, Optional
 
 import altair as alt
@@ -127,6 +128,7 @@ def draw_ranked_frugality(frugal_log_score: pl.DataFrame, bootstraped_scores: pl
 
     Args:
         frugal_log_score (pl.DataFrame): DataFrame with frugality score.
+        bootstraped_scores (pl.DataFrame): DataFrame with bootstraped scores
 
     Returns:
         alt.Chart: chart displaying Elo scores against Elo score adjusted for frugality.
@@ -166,6 +168,7 @@ def draw_chart(
     scale: Literal["match", "token"] | None,
     log: bool = False,
     mean: bool = False,
+    save: bool = False,
 ) -> alt.Chart:
     """
     Draw chart displaying Elo/BT scores against frugality scores.
@@ -176,6 +179,7 @@ def draw_chart(
         scale (Literal) : Select to plot mean_per_token or mean_per_match if mean=True
         log (bool): Whether or not to use a log scale.
         mean (bool): Whether or not to display total consumption or mean consumption.
+        save (bool): Whether or not to save computed graph
 
     Returns:
         alt.Chart: Chart displaying Elo/BT scores against frugality scores.
@@ -199,7 +203,7 @@ def draw_chart(
         elif scale == "token":
             x_column = "mean_conso_per_token"
 
-    return (
+    frugal_chart = (
         alt.Chart(frugality_infos, title=title)
         .mark_point(filled=True)
         .encode(
@@ -213,3 +217,11 @@ def draw_chart(
         .properties(height=300, width=500)
         .add_params(select_organization, select_license)
     )
+
+    if save:
+        save_path = Path(".").resolve().parent / "data"
+        save_path.mkdir(exist_ok=True)
+        file_friendly_title = "_".join(title.split())
+        frugal_chart.save(fp=save_path / f"{file_friendly_title}.html", format="html")
+
+    return frugal_chart
