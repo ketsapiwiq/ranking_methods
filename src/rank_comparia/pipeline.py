@@ -5,12 +5,19 @@
 """Ranking pipeline."""
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Literal
 
 import polars as pl
 
 from rank_comparia.elo import ELORanker
 from rank_comparia.maximum_likelihood import MaximumLikelihoodRanker
+from rank_comparia.plot import (
+    format_matches_for_heatmap,
+    plot_match_counts,
+    plot_scores_with_confidence,
+    plot_winrate_heatmap,
+)
 from rank_comparia.ranker import Match, MatchScore, Ranker
 from rank_comparia.utils import categories, load_comparia
 
@@ -26,7 +33,7 @@ class RankingPipeline:
     include_reactions: bool  # whether to include reactions dataset in raw match data
     bootstrap_samples: int  # number of bootstrap samples
     batch: bool  # whether or not to batch matches together before computing score
-    export_graphs: bool  # whether or not to export graphs
+    export_path: Path | None = None  # path to export graphs, if None does not export
     ranker: Ranker = field(init=False)  # ranker
 
     def __post_init__(self):
@@ -49,7 +56,20 @@ class RankingPipeline:
             pl.DataFrame: Bootstrap scores.
         """
         matches = self.match_list()
-        return self.ranker.compute_bootstrap_scores(matches=matches)
+        scores = self.ranker.compute_bootstrap_scores(matches)
+        self._export_graphs(scores)
+        return scores
+
+    def _export_graphs(self, scores: pl.DataFrame) -> None:
+        if self.export_path is None:
+            return
+        # plot
+        self.export_path.mkdir(parents=True, exist_ok=True)
+        plot_scores_with_confidence(scores).save(self.export_path / "scores_confidence.png", ppi=300)
+        heatmap_data = format_matches_for_heatmap(self.matches)
+        plot_match_counts(heatmap_data).save(self.export_path / "count_heatmap.png", ppi=300)
+        plot_winrate_heatmap(heatmap_data).save(self.export_path / "winrate_heatmap.png", ppi=300)
+        return
 
     def run_category(self, category: str) -> pl.DataFrame:
         """
