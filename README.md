@@ -30,21 +30,21 @@ poetry install
 ## Données utilisées
 
 Les données utilisées pour ce projet sont trois jeux de données, mis à disposition par le SNUM du Ministère de la culture et disponibles sur HuggingFace :
-- [ministere-culture/comparia-conversations](https://huggingface.co/datasets/ministere-culture/comparia-conversations), utilisé pour récupérer les permettant de calculer la consommation énergétique
+- [ministere-culture/comparia-conversations](https://huggingface.co/datasets/ministere-culture/comparia-conversations), utilisé pour récupérer les valeurs permettant de calculer la consommation énergétique
 - [ministere-culture/comparia-reactions](https://huggingface.co/datasets/ministere-culture/comparia-reactions), utilisé pour établir le classement des modèles basé sur les réactions laissées par les utilisateurs au sein des conversations
-- [ministere-culture/comparia-votes](https://huggingface.co/datasets/ministere-culture/comparia-votes), utilisé utilisé pour établir le classement des modèles basé sur les votes des utilisateurs à la fin des conversations
+- [ministere-culture/comparia-votes](https://huggingface.co/datasets/ministere-culture/comparia-votes), utilisé pour établir le classement des modèles basé sur les votes des utilisateurs à la fin des conversations
 
 
 ## Utilisation
 
 Voir les notebooks dans le dossier `notebooks/` pour avoir des exemples d'utilisation.
 
-Le notebook `comparia.ipynb` permet de calculer les différentes méthodes de classement des modèles. 
-Le notebook `frugal.ipynb` permet de calculer en plus la consommation estimée des modèles et de construire une représentation graphique du score de classement en fonction de sa consommation.
-Le notebook `pipeline.ipynb` qui illustre l'utilisation de l'interface `RankingPipeline`
+1. Le notebook `comparia.ipynb` permet de calculer les différentes méthodes de classement des modèles. Il inclut également le calcul de score de classement pondéré par le score énergétique avec également une représentation graphique qui permet d'afficher les scores selon le poids qu'on veut donner à la donnée énergétique.
+2. Le notebook `frugal.ipynb` permet de calculer en plus la consommation estimée des modèles et de construire une représentation graphique du score de classement en fonction de sa consommation.  
+3. Le notebook `pipeline.ipynb` qui illustre l'utilisation de l'interface `RankingPipeline`. Il permet de paramétrer les classements qu'on veut établir, d'exporter des représentations graphiques, comparer les classements établis par les différentes méthodes. On peut également établir des classements selon les mots-clés de la colonne `Categories` du jeu de données.
 
 Les fonctions utilisées dans les notebooks se trouvent dans `src/rank_comparia/` :
-- Les méthodes de calcul de classement se trouvent dans les fichiers `elo.py`, `maximum_likelihood.py`. `ranker.py` est la classe générique.
+- Les méthodes de calcul de classement se trouvent dans les fichiers `elo.py`, `maximum_likelihood.py` dont `ranker.py` est la classe générique.
 - Les méthodes de calcul de la consommation énergétique se trouvent dans `frugality.py`
 - Une pipeline bout en bout est en construction dans `pipeline.py`. Elle inclut pour le moment les méthodes de classement selon différents paramètres (quelle méthode de classement, calcul par batch, quel jeu de données à utiliser, etc.)
 
