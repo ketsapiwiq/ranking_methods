@@ -120,7 +120,7 @@ class RankingPipeline:
         else:
             if category not in categories:
                 raise ValueError(f"Category {category} does not exist in data.")
-            # filter
+            # filter on category name used
             matches = self.matches.filter(pl.col("categories").list.contains(category))
         # return list of Matches
         return [

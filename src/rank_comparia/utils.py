@@ -71,7 +71,7 @@ def load_comparia(
     return data
 
 
-# List of categories in the `comparia-conversation` dataset
+# List of categories in the `comparia-conversation` dataset (column "categories")
 categories: list[str] = [
     "Education",
     "Arts",

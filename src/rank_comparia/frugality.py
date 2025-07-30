@@ -62,6 +62,15 @@ def get_models_output_tokens(conversations: pl.DataFrame):
 
 
 def get_n_match(ranker_score: ELORanker):
+    """
+    Build a DataFrame to map the number of matches played by models
+
+    Args :
+        ranker_score (ELORanker) : Ranker Class used to compute all matches
+
+    Returns:
+        polars DataFrame with 2 columns (model_name, number of matches played)
+    """
     return pl.DataFrame(
         zip(ranker_score.played_matches.keys(), ranker_score.played_matches.values()), schema=["model_name", "n_match"]
     ).sort(by="model_name")
@@ -140,6 +149,7 @@ def draw_ranked_frugality(frugal_log_score: pl.DataFrame, bootstraped_scores: pl
     max_elo = all_data_frugal.max().item(0, "median") // 100 * 100 + 100
     min_elo = all_data_frugal.min().item(0, "median") // 100 * 100
 
+    # Construction of a slider to adjust how much we want to take into account frugality in scoring
     bind_range = alt.binding_range(min=0, max=1, name="frugality coefficient:  ")
     param_width = alt.param(bind=bind_range, value=1)
 
