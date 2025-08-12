@@ -11,9 +11,12 @@ from typing import Literal
 import polars as pl
 
 from rank_comparia.elo import ELORanker
+from rank_comparia.frugality import calculate_frugality_score, get_n_match, get_normalized_log_cost
 from rank_comparia.maximum_likelihood import MaximumLikelihoodRanker
 from rank_comparia.plot import (
+    draw_frugality_chart,
     format_matches_for_heatmap,
+    plot_elo_against_frugal_elo,
     plot_match_counts,
     plot_scores_with_confidence,
     plot_winrate_heatmap,
@@ -33,6 +36,7 @@ class RankingPipeline:
     include_reactions: bool  # whether to include reactions dataset in raw match data
     bootstrap_samples: int  # number of bootstrap samples
     batch: bool  # whether or not to batch matches together before computing score
+    mean_how: Literal["match", "token"]  # Precise how to mean if mean=True, None if mean = False
     export_path: Path | None = None  # path to export graphs, if None does not export
     ranker: Ranker = field(init=False)  # ranker
 
@@ -57,18 +61,35 @@ class RankingPipeline:
         """
         matches = self.match_list()
         scores = self.ranker.compute_bootstrap_scores(matches)
-        self._export_graphs(scores)
+
+        n_match = get_n_match(self.matches)
+
+        # frugality = calculate_frugality_score(self.matches, n_match=n_match, mean=self.mean)
+        frugality = calculate_frugality_score(self.matches, n_match=n_match)
+        scores = scores.join(frugality, on="model_name")
+
+        self._export(scores)
         return scores
 
-    def _export_graphs(self, scores: pl.DataFrame) -> None:
+    def _export(self, scores: pl.DataFrame) -> None:
         if self.export_path is None:
             return
         # plot
         self.export_path.mkdir(parents=True, exist_ok=True)
-        plot_scores_with_confidence(scores).save(self.export_path / "scores_confidence.png", ppi=300)
+        scores.write_csv(file=self.export_path / f"{self.method}_scores.csv", separator=";")
+        plot_scores_with_confidence(scores).save(self.export_path / f"{self.method}_scores_confidence.png", ppi=300)
         heatmap_data = format_matches_for_heatmap(self.matches)
-        plot_match_counts(heatmap_data).save(self.export_path / "count_heatmap.png", ppi=300)
-        plot_winrate_heatmap(heatmap_data).save(self.export_path / "winrate_heatmap.png", ppi=300)
+        plot_match_counts(heatmap_data).save(self.export_path / f"{self.method}_count_heatmap.png", ppi=300)
+        plot_winrate_heatmap(heatmap_data).save(self.export_path / f"{self.method}_winrate_heatmap.png", ppi=300)
+
+        draw_frugality_chart(scores, self.mean_how, log=True).save(
+            fp=self.export_path / f"{self.method}_elo_score_conso.html", format="html"
+        )
+
+        plot_elo_against_frugal_elo(
+            frugal_log_score=get_normalized_log_cost(scores, mean=self.mean_how), bootstraped_scores=scores
+        ).save(fp=self.export_path / f"{self.method}_elo_frugal.html", format="html")
+
         return
 
     def run_category(self, category: str) -> pl.DataFrame:
@@ -83,7 +104,19 @@ class RankingPipeline:
         """
         # filter matches
         matches = self.match_list(category=category)
-        return self.ranker.compute_bootstrap_scores(matches=matches)
+
+        scores = self.ranker.compute_bootstrap_scores(matches)
+
+        n_match = get_n_match(self.matches)
+
+        frugality = calculate_frugality_score(self.matches, n_match=n_match)
+        scores = scores.join(frugality, on="model_name")
+
+        if self.export_path is not None:
+            self.export_path.mkdir(parents=True, exist_ok=True)
+            scores.write_csv(file=self.export_path / f"{category}_scores.csv", separator=";")
+
+        return scores
 
     def run_all_categories(self, min_matches: int = 5000) -> dict[str, pl.DataFrame]:
         """
@@ -103,6 +136,7 @@ class RankingPipeline:
                 print(f"Skipping {category} which has less than 1000 matches.")
                 continue
             results[category] = self.ranker.compute_bootstrap_scores(matches=matches)
+
         return results
 
     def match_list(self, category: str | None = None) -> list[Match]:
@@ -138,8 +172,10 @@ class RankingPipeline:
         matches = []
         if self.include_votes:
             matches.append(self._process_votes_data())
+
         if self.include_reactions:
             matches.append(self._process_reactions_data())
+
         return pl.concat(matches, how="vertical")
 
     def _process_votes_data(self) -> pl.DataFrame:
@@ -170,12 +206,19 @@ class RankingPipeline:
         data = data.filter(pl.col("score").is_not_null())
 
         print(f"Final votes dataset contains {len(data)} conversations pairs.")
+
         return data.select(
+            "conversation_pair_id",
             pl.col("model_a_name").alias("model_a"),
             pl.col("model_b_name").alias("model_b"),
             "score",
-            "conversation_pair_id",
             "categories",
+            "model_a_active_params",
+            "model_b_active_params",
+            "total_conv_a_output_tokens",
+            "total_conv_a_kwh",
+            "total_conv_b_output_tokens",
+            "total_conv_b_kwh",
         )
 
     def _process_reactions_data(self) -> pl.DataFrame:
@@ -192,7 +235,13 @@ class RankingPipeline:
         data = data.group_by("conversation_pair_id").agg(
             [
                 pl.first("model_a_name").alias("model_a"),
+                pl.first("model_a_active_params"),
+                pl.first("total_conv_a_output_tokens"),
+                pl.first("total_conv_a_kwh"),
                 pl.first("model_b_name").alias("model_b"),
+                pl.first("model_b_active_params"),
+                pl.first("total_conv_b_output_tokens"),
+                pl.first("total_conv_b_kwh"),
                 pl.col("model_pos").alias("positions"),
                 pl.col("liked").alias("likes"),
                 pl.col("msg_rank").alias("ranks"),
@@ -277,4 +326,18 @@ class RankingPipeline:
         data = data.filter(pl.col("score").is_not_null())
         print(f"Final reactions dataset contains {len(data)} conversations pairs.")
 
-        return data.select(["model_a", "model_b", "score", "conversation_pair_id", "categories"])
+        return data.select(
+            [
+                "conversation_pair_id",
+                "model_a",
+                "model_b",
+                "score",
+                "categories",
+                "model_a_active_params",
+                "model_b_active_params",
+                "total_conv_a_output_tokens",
+                "total_conv_a_kwh",
+                "total_conv_b_output_tokens",
+                "total_conv_b_kwh",
+            ]
+        )

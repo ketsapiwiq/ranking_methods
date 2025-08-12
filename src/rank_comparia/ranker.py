@@ -113,7 +113,7 @@ class Ranker(ABC):
         bootstrap_column_names = [f"column_{index}" for index in range(self.bootstrap_samples)]
         return (
             results.transpose(include_header=True)
-            .select(model="column", value_array=pl.concat_list(*bootstrap_column_names))
+            .select(model_name="column", value_array=pl.concat_list(*bootstrap_column_names))
             .with_columns(
                 [
                     pl.col("value_array").list.median().alias("median"),

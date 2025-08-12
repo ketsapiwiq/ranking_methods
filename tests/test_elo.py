@@ -41,7 +41,9 @@ def test_elo_bootstrap():
     elo_ranking = ELORanker()
     elo_ranking.add_players(PLAYERS)
     df_scores = elo_ranking.compute_bootstrap_scores(MATCHES)
-    median_scores = {line["model"]: line["median"] for line in df_scores.select(["model", "median"]).to_dicts()}
+    median_scores = {
+        line["model_name"]: line["median"] for line in df_scores.select(["model_name", "median"]).to_dicts()
+    }
     assert median_scores["alice"] >= median_scores["bob"]
     assert median_scores["bob"] >= median_scores["eve"]
 
