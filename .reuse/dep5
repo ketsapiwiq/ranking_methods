@@ -19,7 +19,15 @@ License: CC0-1.0
 
 Files: data/models_data.json
 Copyright: 2025 Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>
-License: MIT
+License: etalab-2.0
+
+Files: data/models_data_augmented.json
+Copyright: 2025 Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>
+License: etalab-2.0
+
+Files: data/comparIA_graph.json
+Copyright: 2025 Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>
+License: etalab-2.0
 
 Files: notebooks/*.ipynb
 Copyright: 2025 Pôle d'Expertise de la Régulation Numérique <contact@peren.gouv.fr>

@@ -9,7 +9,7 @@ import polars as pl
 from networkx.readwrite import json_graph
 
 
-def get_df_source_sink_timestamp(df, year, type_data):
+def get_df_source_sink_timestamp(df, year):
     """
     Restructures the data in order to have sink (a model who won a match) and
     source (a model who lost a match) nodes to plot
@@ -17,9 +17,8 @@ def get_df_source_sink_timestamp(df, year, type_data):
 
     Args:
         df (pl.DataFrame): Votes DataFrame with columns "id", "timestamp",
-        "model_a_name", "model_b_name", "model_pos".
+        "model_a_name", "model_b_name", "chosen_model_name".
         year: 2024 or 2025 to filter data.
-        type_data: "reactions" or "votes" (file names comparIA).
     Returns:
         df: pl.DataFrame with two new columns  "sink_node_model_winner",
         "source_node_model_loser".
@@ -27,42 +26,27 @@ def get_df_source_sink_timestamp(df, year, type_data):
     if "chosen_model_name" in df.columns:
         df = df.filter(pl.col("chosen_model_name") != "null")
 
-    if type_data == "reactions":
-        df = df.select(["id", "timestamp", "model_a_name", "model_b_name", "model_pos"]).sort("timestamp")
-        df = df.with_columns(
-            pl.when(pl.col("model_pos") == "a")
-            .then(pl.col("model_a_name"))
-            .otherwise(pl.col("model_b_name"))
-            .alias("sink_node_model_winner")
-        )
-        df = df.with_columns(
-            pl.when(pl.col("model_pos") == "a")
-            .then(pl.col("model_b_name"))
-            .otherwise(pl.col("model_a_name"))
-            .alias("source_node_model_loser")
-        )
-    elif type_data == "votes":
-        df = df.select(
-            [
-                "id",
-                "timestamp",
-                "model_a_name",
-                "model_b_name",
-                "chosen_model_name",
-            ]
-        ).sort("timestamp")
-        df = df.with_columns(
-            pl.when(pl.col("chosen_model_name") == pl.col("model_a_name"))
-            .then(pl.col("model_a_name"))
-            .otherwise(pl.col("model_b_name"))
-            .alias("sink_node_model_winner")
-        )
-        df = df.with_columns(
-            pl.when(pl.col("chosen_model_name") == pl.col("model_b_name"))
-            .then(pl.col("model_a_name"))
-            .otherwise(pl.col("model_b_name"))
-            .alias("source_node_model_loser")
-        )
+    df = df.select(
+        [
+            "id",
+            "timestamp",
+            "model_a_name",
+            "model_b_name",
+            "chosen_model_name",
+        ]
+    ).sort("timestamp")
+    df = df.with_columns(
+        pl.when(pl.col("chosen_model_name") == pl.col("model_a_name"))
+        .then(pl.col("model_a_name"))
+        .otherwise(pl.col("model_b_name"))
+        .alias("sink_node_model_winner")
+    )
+    df = df.with_columns(
+        pl.when(pl.col("chosen_model_name") == pl.col("model_b_name"))
+        .then(pl.col("model_a_name"))
+        .otherwise(pl.col("model_b_name"))
+        .alias("source_node_model_loser")
+    )
 
     df = df.filter(pl.col("model_a_name") != pl.col("model_b_name"))
 
@@ -103,16 +87,18 @@ def create_graph(df, var_1_source, var_2_sink):
     unique_model_a = df[var_2_sink].unique().to_list()
     unique_model_b = df[var_1_source].unique().to_list()
     all_models = list(set(unique_model_a + unique_model_b))
-    # all_timestamps = df["timestamp_iso"].unique().to_list()
     end_date = df["timestamp_iso"].max()
     G = nx.DiGraph()
+    editors = pl.read_json("../data/models_data_augmented.json")
 
     for model in all_models:
         source_timestamps = df.filter(pl.col(var_1_source) == model).select(pl.col("timestamp_iso"))
         a = source_timestamps.min().item() if not source_timestamps.is_empty() else None
         b = source_timestamps.max().item() if not source_timestamps.is_empty() else None
+        if model in editors["model_name"].unique().to_list():
+            editor = editors.filter(pl.col("model_name") == model)["organization"].item()
 
-        G.add_node(model, start_date=min(a, b), end_date=end_date, model=model)  # type: ignore
+        G.add_node(model, start_date=min(a, b), end_date=end_date, model=model, editor=editor)  # type: ignore
 
     edges_to_add = []
     for row in df.iter_rows(named=True):
