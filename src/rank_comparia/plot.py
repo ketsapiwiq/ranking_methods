@@ -206,7 +206,6 @@ def draw_frugality_chart(
     frugality_infos: pl.DataFrame,
     scale: Literal["match", "token"] | None,
     log: bool = False,
-    # mean: bool = False,
     title: str = "",
 ) -> alt.Chart:
     """
@@ -217,7 +216,6 @@ def draw_frugality_chart(
         title (str): Chart title.
         scale (Literal) : Select to plot mean_per_token or mean_per_match if mean=True
         log (bool): Whether or not to use a log scale.
-        mean (bool): Whether or not to display total consumption or mean consumption.
 
     Returns:
         alt.Chart: Chart displaying Elo/BT scores against frugality scores.
@@ -240,7 +238,6 @@ def draw_frugality_chart(
 
     x_column = "conso_all_conv"
 
-    # if mean:
     if scale == "match":
         x_column = "mean_conso_per_match"
     elif scale == "token":

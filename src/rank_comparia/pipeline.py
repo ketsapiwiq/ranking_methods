@@ -35,8 +35,7 @@ class RankingPipeline:
     include_votes: bool  # whether to include votes dataset in raw match data
     include_reactions: bool  # whether to include reactions dataset in raw match data
     bootstrap_samples: int  # number of bootstrap samples
-    batch: bool  # whether or not to batch matches together before computing score
-    mean_how: Literal["match", "token"]  # Precise how to mean if mean=True, None if mean = False
+    mean_how: Literal["match", "token"]  # Precise how to mean
     export_path: Path | None = None  # path to export graphs, if None does not export
     ranker: Ranker = field(init=False)  # ranker
 
@@ -64,7 +63,6 @@ class RankingPipeline:
 
         n_match = get_n_match(self.matches)
 
-        # frugality = calculate_frugality_score(self.matches, n_match=n_match, mean=self.mean)
         frugality = calculate_frugality_score(self.matches, n_match=n_match)
         scores = scores.join(frugality, on="model_name")
 
