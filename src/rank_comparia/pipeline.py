@@ -18,6 +18,7 @@ from rank_comparia.plot import (
     format_matches_for_heatmap,
     plot_elo_against_frugal_elo,
     plot_match_counts,
+    plot_score_mean_win_proba,
     plot_scores_with_confidence,
     plot_winrate_heatmap,
 )
@@ -75,11 +76,15 @@ class RankingPipeline:
         # plot
         self.export_path.mkdir(parents=True, exist_ok=True)
         scores.write_csv(file=self.export_path / f"{self.method}_scores.csv", separator=";")
+
         plot_scores_with_confidence(scores).save(self.export_path / f"{self.method}_scores_confidence.png", ppi=300)
         heatmap_data = format_matches_for_heatmap(self.matches)
         plot_match_counts(heatmap_data).save(self.export_path / f"{self.method}_count_heatmap.png", ppi=300)
         plot_winrate_heatmap(heatmap_data).save(self.export_path / f"{self.method}_winrate_heatmap.png", ppi=300)
 
+        plot_score_mean_win_proba(scores).save(
+            fp=self.export_path / f"{self.method}_scores_vs_mean_win_proba.html", format="html"
+        )
         draw_frugality_chart(scores, self.mean_how, log=True).save(
             fp=self.export_path / f"{self.method}_elo_score_conso.html", format="html"
         )

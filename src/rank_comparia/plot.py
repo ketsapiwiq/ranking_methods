@@ -12,12 +12,57 @@ import altair as alt
 import polars as pl
 
 
+def plot_score_mean_win_proba(scores: pl.DataFrame) -> alt.Chart:
+    """
+    Plot ELO-type scores against mean probability to win against
+    all other models.
+
+    Args:
+        scores (pl.DataFrame): Scores DataFrame with columns "model_name", "median".
+    Returns:
+        alt.Chart: Plot.
+    """
+    df = scores.select("model_name", "median")
+    df_pairs = (
+        df.join(df, how="cross", suffix="_opp")
+        .filter(pl.col("model_name") != pl.col("model_name_opp"))
+        .with_columns((1 / (1 + 10 ** ((pl.col("median_opp") - pl.col("median")) / 400))).alias("p_win"))
+    )
+
+    df_result = (
+        df_pairs.group_by("model_name", "median")
+        .agg(pl.mean("p_win").alias("mean_win_prob"))
+        .sort("median", descending=True)
+    )
+    df_results = df_result.to_pandas()
+    return (
+        alt.Chart(df_result)
+        .mark_circle(size=80)
+        .encode(
+            x=alt.X(
+                "median:Q",
+                title="Score",
+                scale=alt.Scale(domain=[df_results["median"].min(), df_results["median"].max()]),  # type: ignore
+            ),
+            y=alt.Y(
+                "mean_win_prob:Q",
+                title="Mean win probability",
+                scale=alt.Scale(
+                    domain=[df_results["mean_win_prob"].min(), df_results["mean_win_prob"].max()]  # type: ignore
+                ),
+            ),
+            tooltip=["model_name", "median", "mean_win_prob"],
+        )
+        .properties(width=500, height=400, title="Score vs. mean win probability")
+    )
+
+
 def plot_scores_with_confidence(scores: pl.DataFrame) -> alt.LayerChart:
     """
     Plot models scores.
 
     Args:
-        scores (pl.DataFrame): Scores DataFrame with columns "model", "median", "p2.5" and "p97.5".
+        scores (pl.DataFrame): Scores DataFrame with columns "model_name", "median", "p2.5" and "p97.5".
     Returns:
         alt.Chart: Plot.
     """
