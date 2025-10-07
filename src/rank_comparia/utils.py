@@ -26,6 +26,7 @@ def load_comparia(
         "ministere-culture/comparia-reactions",
         "ministere-culture/comparia-votes",
     ],
+    token: str | None,
     **kwargs,
 ) -> pl.DataFrame:
     """
@@ -47,12 +48,15 @@ def load_comparia(
     data: pl.DataFrame = datasets.load_dataset(
         repository,
         split="train",
+        token=token,
         **kwargs,
     ).to_polars()  # type: ignore
 
+    print(**kwargs)
+
     # add categories column
     conversations: pl.DataFrame = datasets.load_dataset(
-        "ministere-culture/comparia-conversations", split="train", **kwargs
+        "ministere-culture/comparia-conversations", split="train", token=token, **kwargs
     ).to_polars()  # type: ignore
     conversations = conversations.select(
         [

@@ -37,6 +37,7 @@ class RankingPipeline:
     include_reactions: bool  # whether to include reactions dataset in raw match data
     bootstrap_samples: int  # number of bootstrap samples
     mean_how: Literal["match", "token"]  # Precise how to mean
+    token: str | None = None  # token to download datasets from HuggingFace
     export_path: Path | None = None  # path to export graphs, if None does not export
     ranker: Ranker = field(init=False)  # ranker
 
@@ -165,7 +166,9 @@ class RankingPipeline:
             for d in matches.select(["model_a", "model_b", "score", "conversation_pair_id"]).to_dicts()
         ]
 
-    def _process_data(self) -> pl.DataFrame:
+    def _process_data(
+        self,
+    ) -> pl.DataFrame:
         """
         Process raw data.
 
@@ -188,7 +191,7 @@ class RankingPipeline:
         Returns:
             pl.DataFrame: Formatted votes data.
         """
-        data = load_comparia("ministere-culture/comparia-votes")
+        data = load_comparia("ministere-culture/comparia-votes", token=self.token)
         # drop duplicates
         data = data.unique(subset="conversation_pair_id", keep="first")
         # remove if equal is None and chosen is None
@@ -232,7 +235,7 @@ class RankingPipeline:
             pl.DataFrame: Formatted reactions data.
         """
         # load data
-        data = load_comparia("ministere-culture/comparia-reactions")
+        data = load_comparia("ministere-culture/comparia-reactions", token=self.token)
 
         # aggregate data by conversation pair (~ session)
         data = data.group_by("conversation_pair_id").agg(
