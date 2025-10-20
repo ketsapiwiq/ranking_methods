@@ -12,16 +12,16 @@ import altair as alt
 import polars as pl
 
 
-def plot_score_mean_win_proba(scores: pl.DataFrame) -> alt.Chart:
+def format_scores_for_mean_win_proba(scores: pl.DataFrame) -> pl.DataFrame:
     """
-    Plot ELO-type scores against mean probability to win against
-    all other models.
+    Compute mean probability to win against all other models.
 
     Args:
         scores (pl.DataFrame): Scores DataFrame with columns "model_name", "median".
     Returns:
-        alt.Chart: Plot.
+        pl.DataFrame: Mean win proba data.
     """
+
     df = scores.select("model_name", "median")
     df_pairs = (
         df.join(df, how="cross", suffix="_opp")
@@ -29,14 +29,27 @@ def plot_score_mean_win_proba(scores: pl.DataFrame) -> alt.Chart:
         .with_columns((1 / (1 + 10 ** ((pl.col("median_opp") - pl.col("median")) / 400))).alias("p_win"))
     )
 
-    df_result = (
+    return (
         df_pairs.group_by("model_name", "median")
         .agg(pl.mean("p_win").alias("mean_win_prob"))
         .sort("median", descending=True)
     )
-    df_results = df_result.to_pandas()
+
+
+def plot_score_mean_win_proba(mean_win_proba: pl.DataFrame) -> alt.Chart:
+    """
+    Plot ELO-type scores against mean probability to win against
+    all other models.
+
+    Args:
+        scores (pl.DataFrame): Scores DataFrame with columns "model_name", "median", "mean_win_prob".
+    Returns:
+        alt.Chart: Plot.
+    """
+
+    df_results = mean_win_proba.to_pandas()
     return (
-        alt.Chart(df_result)
+        alt.Chart(mean_win_proba)
         .mark_circle(size=80)
         .encode(
             x=alt.X(
