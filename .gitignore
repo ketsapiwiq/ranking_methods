@@ -170,3 +170,5 @@ node_modules/
 .idea/
 
 /cache
+src/cache/
+src/output/
