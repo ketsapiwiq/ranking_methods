@@ -16,11 +16,14 @@ from rank_comparia.maximum_likelihood import MaximumLikelihoodRanker
 from rank_comparia.plot import (
     draw_frugality_chart,
     format_matches_for_heatmap,
+    format_matches_for_winrate_count,
+    format_scores_for_mean_win_proba,
     plot_elo_against_frugal_elo,
     plot_match_counts,
     plot_score_mean_win_proba,
     plot_scores_with_confidence,
     plot_winrate_heatmap,
+    plot_winrate_count,
 )
 from rank_comparia.ranker import Match, MatchScore, Ranker
 from rank_comparia.utils import categories, load_comparia
@@ -84,9 +87,13 @@ class RankingPipeline:
         plot_match_counts(heatmap_data).save(self.export_path / f"{self.method}_count_heatmap.png", ppi=300)
         plot_winrate_heatmap(heatmap_data).save(self.export_path / f"{self.method}_winrate_heatmap.png", ppi=300)
 
-        plot_score_mean_win_proba(scores).save(
+        # score mean win probability
+        mean_win_proba = format_scores_for_mean_win_proba(scores)
+        mean_win_proba.write_json(file=self.export_path / f"{self.method}_mean_win_proba.json")
+        plot_score_mean_win_proba(mean_win_proba).save(
             fp=self.export_path / f"{self.method}_scores_vs_mean_win_proba.html", format="html"
         )
+
         draw_frugality_chart(scores, self.mean_how, log=True).save(
             fp=self.export_path / f"{self.method}_elo_score_conso.html", format="html"
         )
@@ -94,6 +101,19 @@ class RankingPipeline:
         plot_elo_against_frugal_elo(
             frugal_log_score=get_normalized_log_cost(scores, mean=self.mean_how), bootstraped_scores=scores
         ).save(fp=self.export_path / f"{self.method}_elo_frugal.html", format="html")
+
+        # classic winrate
+        winrate_count_data = format_matches_for_winrate_count(heatmap_data)
+        winrate_count_data.write_json(file=self.export_path / f"{self.method}_winrate_count.json")
+        plot_winrate_count(winrate_count_data).save(self.export_path / f"{self.method}_winrate_count.svg")
+
+        # Merge score + winrate + mean win proba
+        final_data = (
+            scores.join(mean_win_proba.select("model_name", "mean_win_prob"), on="model_name")
+            .join(winrate_count_data.select("model_name", "win_rate"), on="model_name")
+            .sort("median", descending=True)
+        )
+        final_data.write_json(file=self.export_path / f"{self.method}_final_data.json")
 
         return
 

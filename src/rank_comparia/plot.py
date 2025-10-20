@@ -12,16 +12,93 @@ import altair as alt
 import polars as pl
 
 
-def plot_score_mean_win_proba(scores: pl.DataFrame) -> alt.Chart:
+def format_matches_for_winrate_count(matches_data: pl.DataFrame) -> pl.DataFrame:
     """
-    Plot ELO-type scores against mean probability to win against
-    all other models.
+    From aggregated data with columns "model_a", "model_b", "a_win_ratio", and "count",
+    returned aggregated winrate data
+
+    Args:
+        matches_data (pl.DataFrame): Matches data with "model_a", "model_b", "a_win_ratio", and "count".
+    Returns:
+        pl.DataFrame: Winrate count data.
+    """
+
+    weighted_a_wins = (
+        matches_data.group_by("model_a")
+        .agg(
+            [
+                (pl.col("a_win_ratio") * pl.col("count")).sum().alias("weighted_sum"),
+                pl.col("count").sum().alias("total_count"),
+            ]
+        )
+        .rename({"model_a": "model_name"})
+    )
+
+    weighted_b_wins = (
+        matches_data.group_by("model_b")
+        .agg(
+            [
+                ((1.0 - pl.col("a_win_ratio")) * pl.col("count")).sum().alias("weighted_sum"),
+                pl.col("count").sum().alias("total_count"),
+            ]
+        )
+        .rename({"model_b": "model_name"})
+    )
+
+    combined_wins = pl.concat([weighted_a_wins, weighted_b_wins])
+
+    return (
+        combined_wins.group_by("model_name")
+        .agg(
+            [
+                pl.col("weighted_sum").sum().alias("final_weighted_sum"),
+                pl.col("total_count").sum().alias("final_total_count"),
+            ]
+        )
+        .with_columns((pl.col("final_weighted_sum") / pl.col("final_total_count")).alias("win_rate"))
+        .sort("win_rate", descending=True)
+    )
+
+
+def plot_winrate_count(winrate_data: pl.DataFrame) -> alt.LayerChart:
+    """
+    From aggregated data with columns "model_a", "model_b", "a_win_ratio", and "count",
+    plot a graph of weighted average winrate for each model.
+
+    Args:
+        matches_data (pl.DataFrame): Matches data with "model_a", "model_b", "a_win_ratio", and "count".
+    Returns:
+        alt.Chart: A bar chart of weighted average winrates per model.
+    """
+
+    base = alt.Chart(winrate_data.to_pandas()).encode(
+        x=alt.X("model:N", sort="-y", title="Modèle"),
+        y=alt.Y("win_rate:Q", title="Taux de victoire moyen (pondéré)"),
+        tooltip=["model_name", alt.Tooltip("win_rate", format=".2f")],
+        color=alt.Color("win_rate:Q", scale=alt.Scale(scheme="redblue"), legend=None),
+    )
+
+    bars = base.mark_bar()
+    text = base.mark_text(
+        align="center",
+        baseline="bottom",
+        dy=-5,
+        fontSize=10,
+    ).encode(text=alt.Text("win_rate:Q", format=".2f"))
+
+    return bars + text
+
+
+def format_scores_for_mean_win_proba(scores: pl.DataFrame) -> pl.DataFrame:
+    """
+    Compute mean probability to win against all other models.
 
     Args:
         scores (pl.DataFrame): Scores DataFrame with columns "model_name", "median".
     Returns:
-        alt.Chart: Plot.
+        pl.DataFrame: Mean win proba data.
     """
+
     df = scores.select("model_name", "median")
     df_pairs = (
         df.join(df, how="cross", suffix="_opp")
@@ -29,14 +106,27 @@ def plot_score_mean_win_proba(scores: pl.DataFrame) -> alt.Chart:
         .with_columns((1 / (1 + 10 ** ((pl.col("median_opp") - pl.col("median")) / 400))).alias("p_win"))
     )
 
-    df_result = (
+    return (
         df_pairs.group_by("model_name", "median")
         .agg(pl.mean("p_win").alias("mean_win_prob"))
         .sort("median", descending=True)
     )
-    df_results = df_result.to_pandas()
+
+
+def plot_score_mean_win_proba(mean_win_proba: pl.DataFrame) -> alt.Chart:
+    """
+    Plot ELO-type scores against mean probability to win against
+    all other models.
+
+    Args:
+        scores (pl.DataFrame): Scores DataFrame with columns "model_name", "median", "mean_win_prob".
+    Returns:
+        alt.Chart: Plot.
+    """
+
+    df_results = mean_win_proba.to_pandas()
     return (
-        alt.Chart(df_result)
+        alt.Chart(mean_win_proba)
         .mark_circle(size=80)
         .encode(
             x=alt.X(

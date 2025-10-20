@@ -14,7 +14,7 @@ except:
 from rank_comparia.pipeline import RankingPipeline
 
 pipeline = RankingPipeline(
-    method="elo_random",
+    method="ml",
     include_votes=True,
     include_reactions=True,
     bootstrap_samples=1000,
