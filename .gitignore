@@ -169,6 +169,5 @@ node_modules/
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 .idea/
 
-/cache
-src/cache/
-src/output/
+cache
+output

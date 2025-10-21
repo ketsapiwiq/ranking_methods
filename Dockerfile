@@ -9,7 +9,7 @@ ENV PATH="/root/.local/bin/:$PATH"
 COPY ./pyproject.toml /app/pyproject.toml
 WORKDIR /app
 RUN uv sync
-RUN uv pip install -e .
 COPY ./ /app/
+RUN uv pip install -e .
 
 CMD ["uv", "run", "src/rank_comparia/export.py"]
