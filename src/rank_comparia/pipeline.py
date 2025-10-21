@@ -99,9 +99,9 @@ class RankingPipeline:
         #     fp=self.export_path / f"{self.method}_elo_score_conso.html", format="html"
         # )
 
-        plot_elo_against_frugal_elo(
-            frugal_log_score=get_normalized_log_cost(scores, mean=self.mean_how), bootstraped_scores=scores
-        ).save(fp=self.export_path / f"{self.method}_elo_frugal.html", format="html")
+        # plot_elo_against_frugal_elo(
+        #     frugal_log_score=get_normalized_log_cost(scores, mean=self.mean_how), bootstraped_scores=scores
+        # ).save(fp=self.export_path / f"{self.method}_elo_frugal.html", format="html")
 
         # classic winrate
         winrate_count_data = format_matches_for_winrate_count(heatmap_data)
