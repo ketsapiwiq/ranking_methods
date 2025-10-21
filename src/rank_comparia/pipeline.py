@@ -95,9 +95,9 @@ class RankingPipeline:
             fp=self.export_path / f"{self.method}_scores_vs_mean_win_proba.html", format="html"
         )
 
-        draw_frugality_chart(scores, self.mean_how, log=True).save(
-            fp=self.export_path / f"{self.method}_elo_score_conso.html", format="html"
-        )
+        # # draw_frugality_chart(scores, self.mean_how, log=True).save(
+        #     fp=self.export_path / f"{self.method}_elo_score_conso.html", format="html"
+        # )
 
         plot_elo_against_frugal_elo(
             frugal_log_score=get_normalized_log_cost(scores, mean=self.mean_how), bootstraped_scores=scores
