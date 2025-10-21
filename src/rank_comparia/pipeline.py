@@ -114,9 +114,9 @@ class RankingPipeline:
 
         # Merge score + winrate + mean win proba
         final_data = (
-            scores.join(mean_win_proba.select("model_name", "mean_win_prob"), on="model_name")
-            .join(winrate_count_data.select("model_name", "win_rate"), on="model_name")
-            .join(preferences_data, on="model_name")
+            scores.join(mean_win_proba.select("model_name", "mean_win_prob"), on="model_name", how="left")
+            .join(winrate_count_data.select("model_name", "win_rate"), on="model_name", how="left")
+                        .join(preferences_data, on="model_name", how="left")
             .sort("median", descending=True)
         )
         final_data.write_json(file=self.export_path / f"{self.method}_final_data.json")
