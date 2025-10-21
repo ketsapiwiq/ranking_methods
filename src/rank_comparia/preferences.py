@@ -1,7 +1,7 @@
 import os
 import operator
 import polars as pl
-from pathlib import Path
+
 from rank_comparia.utils import load_comparia
 
 POSITIVE_REACTIONS = [
@@ -33,8 +33,10 @@ def compute_total_and_ratio(data: pl.DataFrame) -> pl.DataFrame:
     return data
 
 
-def get_votes_preferences() -> pl.DataFrame:
-    data = load_comparia("ministere-culture/comparia-votes")
+def get_votes_preferences(data: pl.DataFrame | None = None) -> pl.DataFrame:
+    if data is None:
+        data = load_comparia("ministere-culture/comparia-votes", token=None)
+
     data = (
         pl.concat(
             [
@@ -63,8 +65,10 @@ def get_votes_preferences() -> pl.DataFrame:
     return compute_total_and_ratio(data)
 
 
-def get_reactions_preferences() -> pl.DataFrame:
-    data = load_comparia("ministere-culture/comparia-reactions")
+def get_reactions_preferences(data: pl.DataFrame | None = None) -> pl.DataFrame:
+    if data is None:
+        data = load_comparia("ministere-culture/comparia-reactions", token=None)
+
     data = (
         data.select(
             model_name=pl.col("refers_to_model"),
@@ -82,22 +86,10 @@ def get_reactions_preferences() -> pl.DataFrame:
     return compute_total_and_ratio(data)
 
 
-def get_merged_votes_and_reactions_preferences(
-    votes_preferences: pl.DataFrame, reactions_preferences: pl.DataFrame
-) -> pl.DataFrame:
+def get_preferences_data(votes_data: pl.DataFrame | None = None, reactions_data: pl.DataFrame | None = None):
+    votes_preferences = get_votes_preferences(votes_data)
+    reactions_preferences = get_reactions_preferences(reactions_data)
+
     return compute_total_and_ratio(
         pl.concat([votes_preferences, reactions_preferences]).group_by("model_name").sum().sort(by="model_name")
     )
-
-
-if __name__ == "__main__":
-    OUTPUT_PATH = Path(__file__).parent.parent.parent / "output"
-    votes_preferences = get_votes_preferences()
-    votes_preferences.write_json(OUTPUT_PATH / "preferences-votes.json")
-
-    reactions_preferences = get_reactions_preferences()
-    reactions_preferences.write_json(OUTPUT_PATH / "preferences-reactions.json")
-
-    merged_preferences = get_merged_votes_and_reactions_preferences(votes_preferences, reactions_preferences)
-    merged_preferences.write_json(OUTPUT_PATH / "preferences.json")
-    merged_preferences.write_json(OUTPUT_PATH.parent.parent / "models" / "generated-preferences.json")
