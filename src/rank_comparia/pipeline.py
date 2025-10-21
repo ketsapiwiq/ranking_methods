@@ -25,6 +25,7 @@ from rank_comparia.plot import (
     plot_winrate_heatmap,
     plot_winrate_count,
 )
+from rank_comparia.preferences import get_preferences_data
 from rank_comparia.ranker import Match, MatchScore, Ranker
 from rank_comparia.utils import categories, load_comparia
 
@@ -107,10 +108,15 @@ class RankingPipeline:
         winrate_count_data.write_json(file=self.export_path / f"{self.method}_winrate_count.json")
         plot_winrate_count(winrate_count_data).save(self.export_path / f"{self.method}_winrate_count.svg")
 
+        # preferences
+        preferences_data = get_preferences_data()
+        preferences_data.write_json(file=self.export_path / f"preferences.json")
+
         # Merge score + winrate + mean win proba
         final_data = (
             scores.join(mean_win_proba.select("model_name", "mean_win_prob"), on="model_name")
             .join(winrate_count_data.select("model_name", "win_rate"), on="model_name")
+            .join(preferences_data, on="model_name")
             .sort("median", descending=True)
         )
         final_data.write_json(file=self.export_path / f"{self.method}_final_data.json")
