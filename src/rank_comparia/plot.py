@@ -12,19 +12,22 @@ import altair as alt
 import polars as pl
 
 
-def format_matches_for_winrate_count(matches_data: pl.DataFrame) -> pl.DataFrame:
+def format_matches_for_winrate_count(heatmap_data: pl.DataFrame) -> pl.DataFrame:
     """
     From aggregated data with columns "model_a", "model_b", "a_win_ratio", and "count",
     returned aggregated winrate data
 
     Args:
-        matches_data (pl.DataFrame): Matches data with "model_a", "model_b", "a_win_ratio", and "count".
+        heatmap_data (pl.DataFrame): Matches data with "model_a", "model_b", "a_win_ratio", and "count".
     Returns:
         pl.DataFrame: Winrate count data.
     """
+    # FIXME some aggregated matchs are draws (no winners) so `a_win_ratio` is NaN
+    # Drops them here (could be done in `format_matches_for_heatmap`)
+    heatmap_data = heatmap_data.drop_nans("a_win_ratio")
 
     weighted_a_wins = (
-        matches_data.group_by("model_a")
+        heatmap_data.group_by("model_a")
         .agg(
             [
                 (pl.col("a_win_ratio") * pl.col("count")).sum().alias("weighted_sum"),
@@ -35,7 +38,7 @@ def format_matches_for_winrate_count(matches_data: pl.DataFrame) -> pl.DataFrame
     )
 
     weighted_b_wins = (
-        matches_data.group_by("model_b")
+        heatmap_data.group_by("model_b")
         .agg(
             [
                 ((1.0 - pl.col("a_win_ratio")) * pl.col("count")).sum().alias("weighted_sum"),
@@ -215,6 +218,8 @@ def format_matches_for_heatmap(matches: pl.DataFrame) -> pl.DataFrame:
             pl.concat([counts, reversed_counts])
             .group_by(["model_a", "model_b"])
             .agg(pl.sum("a_wins"), pl.sum("b_wins"), pl.sum("draws"))
+            # FIXME could filter draws out here to avoid having NaN values for "a_win_ratio"
+            # .filter(pl.col("a_wins").add(pl.col("b_wins")).gt(0))
         )
         .with_columns((pl.col("a_wins") + pl.col("b_wins") + pl.col("draws")).alias("count"))
         .with_columns((pl.col("a_wins") / (pl.col("a_wins") + pl.col("b_wins"))).round(2).alias("a_win_ratio"))
