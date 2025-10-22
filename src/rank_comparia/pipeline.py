@@ -112,11 +112,11 @@ class RankingPipeline:
         preferences_data = get_preferences_data()
         preferences_data.write_json(file=self.export_path / f"preferences.json")
 
-        # Merge score + winrate + mean win proba
+        # Merge score + winrate + mean win proba + preferences
         final_data = (
             scores.join(mean_win_proba.select("model_name", "mean_win_prob"), on="model_name", how="left")
             .join(winrate_count_data.select("model_name", "win_rate"), on="model_name", how="left")
-                        .join(preferences_data, on="model_name", how="left")
+            .join(preferences_data, on="model_name", how="left")
             .sort("median", descending=True)
         )
         final_data.write_json(file=self.export_path / f"{self.method}_final_data.json")
