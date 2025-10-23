@@ -5,9 +5,11 @@
 """Ranking pipeline."""
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
+import json
 import polars as pl
 
 from rank_comparia.elo import ELORanker
@@ -119,7 +121,16 @@ class RankingPipeline:
             .join(preferences_data, on="model_name", how="left")
             .sort("median", descending=True)
         )
-        final_data.write_json(file=self.export_path / f"{self.method}_final_data.json")
+        final_path = self.export_path / f"{self.method}_final_data.json"
+        final_path.write_text(
+            json.dumps(
+                {
+                    "timestamp": datetime.now().timestamp(),
+                    "models": final_data.to_dicts(),
+                },
+                indent=2,
+            )
+        )
 
         return
 
