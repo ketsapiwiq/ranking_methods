@@ -126,7 +126,7 @@ class RankingPipeline:
             json.dumps(
                 {
                     "timestamp": datetime.now().timestamp(),
-                    "data": final_data.to_dicts(),
+                    "models": final_data.to_dicts(),
                 },
                 indent=2,
             )
