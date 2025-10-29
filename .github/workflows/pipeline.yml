@@ -1,0 +1,39 @@
+name: Pipeline
+on: [push, pull_request]
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+    - name: Install uv
+      run: pipx install uv
+    - name: Cache uv virtual environment
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+    - name: Install dependencies
+      run: uv sync
+    - name: Install local package in editable mode
+      run: uv pip install -e .
+    - name: Download models data
+      run: curl https://comparia.beta.gouv.fr/available_models -o ./data/models_data.json
+    - name: Exec export script
+      run: |
+        uv run python src/rank_comparia/export.py || true
+      env:
+        HF_DATASETS_CACHE: cache
+        HF_HUB_CACHE: cache
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    - name: Upload outputs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: outputs
+        path: output/
+        if-no-files-found: ignore
