@@ -14,7 +14,7 @@ jobs:
       run: uv sync
     - name: Exec export script
       run: |
-        uv run python src/rank_comparia/export.py || true
+        uv run python src/rank_comparia/cli.py || true
       env:
         HF_DATASETS_CACHE: cache
         HF_HUB_CACHE: cache
