@@ -77,44 +77,58 @@ class RankingPipeline:
         self._export(scores)
         return scores
 
-    def _export(self, scores: pl.DataFrame) -> None:
+    def compute_scores_only(self) -> pl.DataFrame:
+        """
+        Calcule uniquement les scores de classement.
+
+        Returns:
+            pl.DataFrame: Bootstrap scores sans frugalité.
+        """
+        matches = self.match_list()
+        return self.ranker.compute_bootstrap_scores(matches)
+
+    def compute_frugality_only(self, scores: pl.DataFrame) -> pl.DataFrame:
+        """
+        Calcule uniquement les scores de frugalité.
+
+        Args:
+            scores (pl.DataFrame): Scores de classement.
+
+        Returns:
+            pl.DataFrame: Scores avec frugalité ajoutée.
+        """
+        n_match_stats = get_n_match(self.matches)
+        frugality_scores = calculate_frugality_score(self.matches, n_match=n_match_stats)
+        return scores.join(frugality_scores, on="model_name", how="left")
+
+    def export_data_only(self, scores: pl.DataFrame) -> None:
+        """
+        Exporte uniquement les données (CSV, JSON).
+
+        Args:
+            scores (pl.DataFrame): Scores à exporter.
+        """
         if self.export_path is None:
             return
-        # plot
+        
         self.export_path.mkdir(parents=True, exist_ok=True)
+        
+        # Export CSV et JSON des scores
         scores.write_csv(file=self.export_path / f"{self.method}_scores.csv", separator=";")
         scores.write_json(file=self.export_path / f"{self.method}_scores.json")
 
-        plot_scores_with_confidence(scores).save(self.export_path / f"{self.method}_scores_confidence.png", ppi=300)
+        # Préparation des données pour l'export
         heatmap_data = format_matches_for_heatmap(self.matches)
-        plot_match_counts(heatmap_data).save(self.export_path / f"{self.method}_count_heatmap.png", ppi=300)
-        plot_winrate_heatmap(heatmap_data).save(self.export_path / f"{self.method}_winrate_heatmap.png", ppi=300)
-
-        # score mean win probability
         mean_win_proba = format_scores_for_mean_win_proba(scores)
-        mean_win_proba.write_json(file=self.export_path / f"{self.method}_mean_win_proba.json")
-        plot_score_mean_win_proba(mean_win_proba).save(
-            fp=self.export_path / f"{self.method}_scores_vs_mean_win_proba.html", format="html"
-        )
-
-        draw_frugality_chart(scores, self.mean_how, log=True).save(
-            fp=self.export_path / f"{self.method}_elo_score_conso.html", format="html"
-        )
-
-        plot_elo_against_frugal_elo(
-            frugal_log_score=get_normalized_log_cost(scores, mean=self.mean_how), bootstraped_scores=scores
-        ).save(fp=self.export_path / f"{self.method}_elo_frugal.html", format="html")
-
-        # classic winrate
         winrate_count_data = format_matches_for_winrate_count(heatmap_data)
-        winrate_count_data.write_json(file=self.export_path / f"{self.method}_winrate_count.json")
-        plot_winrate_count(winrate_count_data).save(self.export_path / f"{self.method}_winrate_count.svg")
-
-        # preferences
         preferences_data = get_preferences_data()
+
+        # Export des données JSON
+        mean_win_proba.write_json(file=self.export_path / f"{self.method}_mean_win_proba.json")
+        winrate_count_data.write_json(file=self.export_path / f"{self.method}_winrate_count.json")
         preferences_data.write_json(file=self.export_path / f"preferences.json")
 
-        # Merge score + winrate + mean win proba + preferences
+        # Fusion et export des données finales
         final_data = (
             scores.join(mean_win_proba.select("model_name", "mean_win_prob"), on="model_name", how="left")
             .join(winrate_count_data.select("model_name", "win_rate"), on="model_name", how="left")
@@ -132,6 +146,55 @@ class RankingPipeline:
             )
         )
 
+    def generate_visualizations_only(self, scores: pl.DataFrame) -> None:
+        """
+        Génère uniquement les visualisations (PNG, HTML, SVG).
+
+        Args:
+            scores (pl.DataFrame): Scores pour lesquels générer les visualisations.
+        """
+        if self.export_path is None:
+            return
+        
+        self.export_path.mkdir(parents=True, exist_ok=True)
+        
+        # Préparation des données pour les visualisations
+        heatmap_data = format_matches_for_heatmap(self.matches)
+        mean_win_proba = format_scores_for_mean_win_proba(scores)
+        winrate_count_data = format_matches_for_winrate_count(heatmap_data)
+
+        # Génération des visualisations PNG
+        plot_scores_with_confidence(scores).save(self.export_path / f"{self.method}_scores_confidence.png", ppi=300)
+        plot_match_counts(heatmap_data).save(self.export_path / f"{self.method}_count_heatmap.png", ppi=300)
+        plot_winrate_heatmap(heatmap_data).save(self.export_path / f"{self.method}_winrate_heatmap.png", ppi=300)
+
+        # Génération des visualisations HTML
+        plot_score_mean_win_proba(mean_win_proba).save(
+            fp=self.export_path / f"{self.method}_scores_vs_mean_win_proba.html", format="html"
+        )
+        draw_frugality_chart(scores, self.mean_how, log=True).save(
+            fp=self.export_path / f"{self.method}_elo_score_conso.html", format="html"
+        )
+        plot_elo_against_frugal_elo(
+            frugal_log_score=get_normalized_log_cost(scores, mean=self.mean_how), bootstraped_scores=scores
+        ).save(fp=self.export_path / f"{self.method}_elo_frugal.html", format="html")
+
+        # Génération de la visualisation SVG
+        plot_winrate_count(winrate_count_data).save(self.export_path / f"{self.method}_winrate_count.svg")
+
+    def _export(self, scores: pl.DataFrame, export_data: bool = True, generate_viz: bool = True) -> None:
+        """
+        Export avec options pour contrôler ce qui est généré.
+
+        Args:
+            scores (pl.DataFrame): Scores à exporter.
+            export_data (bool): Si True, exporte les données (CSV, JSON).
+            generate_viz (bool): Si True, génère les visualisations (PNG, HTML, SVG).
+        """
+        if export_data:
+            self.export_data_only(scores)
+        if generate_viz:
+            self.generate_visualizations_only(scores)
         return
 
     def run_category(self, category: str) -> pl.DataFrame:

@@ -56,7 +56,71 @@ Les fonctions utilisées dans les notebooks se trouvent dans `src/rank_comparia/
 
 Les fonctions nécessaires à la construction du graphe dynamique représentant l'évolution des matchs se trouve dans le dossier `graph-frontend/`. Les fichiers de données nécessaires à la construction de ces graphes se trouvent dans `graph-fronted/files/` ; il est possible de mettre à jour ces données en générant de nouveaux fichiers avec le notebook `graph.ipynb`. Ces données seront sauvegardées dans `/data`. Les fonctions utilisées dans ce notebook se trouve dans `notebooks/utils_graph_d3.py`.
 
+## Utilisation du CLI
 
+Le script `export.py` peut maintenant être utilisé comme interface en ligne de commande avec plusieurs flags pour contrôler l'exécution du pipeline :
+
+### Commande de base
+
+```bash
+uv run python src/rank_comparia/export.py [flags]
+```
+
+### Flags disponibles
+
+- `--download` : Télécharge les données depuis Hugging Face (vérifie d'abord si le cache existe)
+- `--download-models` : Télécharge les métadonnées des modèles depuis comparia.beta.gouv.fr
+- `--compute-scores` : Calcule les scores de classement
+- `--compute-frugality` : Calcule les scores de frugalité
+- `--visualizations` : Génère les visualisations
+- `--export` : Exporte les données
+- `--all` : Exécute toutes les étapes (comportement par défaut si aucun flag n'est spécifié)
+- `--category <nom>` : Traite une catégorie spécifique
+- `--force-download` : Force le téléchargement même si le cache existe
+
+### Exemples d'utilisation
+
+**Exécution complète du pipeline (par défaut) :**
+```bash
+uv run python src/rank_comparia/export.py
+# ou
+uv run python src/rank_comparia/export.py --all
+```
+
+**Téléchargement des données uniquement :**
+```bash
+uv run python src/rank_comparia/export.py --download
+```
+
+**Téléchargement des métadonnées des modèles :**
+```bash
+uv run python src/rank_comparia/export.py --download-models
+```
+
+**Calcul des scores pour une catégorie spécifique :**
+```bash
+uv run python src/rank_comparia/export.py --compute-scores --category "creative-writing"
+```
+
+**Exécution d'étapes spécifiques :**
+```bash
+# Télécharger les données puis calculer les scores
+uv run python src/rank_comparia/export.py --download --compute-scores
+
+# Calculer scores et frugalité, puis exporter
+uv run python src/rank_comparia/export.py --compute-scores --compute-frugality --export
+```
+
+**Forcer le re-téléchargement des données :**
+```bash
+uv run python src/rank_comparia/export.py --download --force-download
+```
+
+### Variables d'environnement requises
+
+- `HF_TOKEN` : Token d'authentification Hugging Face (obligatoire)
+- `HF_DATASETS_CACHE` : Répertoire de cache pour les datasets (défaut: `cache`)
+- `HF_HUB_CACHE` : Répertoire de cache pour le Hub (défaut: `cache`)
 
 ## Tests
 ```bash
