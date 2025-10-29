@@ -58,12 +58,12 @@ Les fonctions nécessaires à la construction du graphe dynamique représentant 
 
 ## Utilisation du CLI
 
-Le script `export.py` peut maintenant être utilisé comme interface en ligne de commande avec plusieurs flags pour contrôler l'exécution du pipeline :
+Le script `cli.py` peut maintenant être utilisé comme interface en ligne de commande avec plusieurs flags pour contrôler l'exécution du pipeline :
 
 ### Commande de base
 
 ```bash
-uv run python src/rank_comparia/export.py [flags]
+uv run python src/rank_comparia/cli.py [flags]
 ```
 
 ### Flags disponibles
@@ -82,38 +82,38 @@ uv run python src/rank_comparia/export.py [flags]
 
 **Exécution complète du pipeline (par défaut) :**
 ```bash
-uv run python src/rank_comparia/export.py
+uv run python src/rank_comparia/cli.py
 # ou
-uv run python src/rank_comparia/export.py --all
+uv run python src/rank_comparia/cli.py --all
 ```
 
 **Téléchargement des données uniquement :**
 ```bash
-uv run python src/rank_comparia/export.py --download
+uv run python src/rank_comparia/cli.py --download
 ```
 
 **Téléchargement des métadonnées des modèles :**
 ```bash
-uv run python src/rank_comparia/export.py --download-models
+uv run python src/rank_comparia/cli.py --download-models
 ```
 
 **Calcul des scores pour une catégorie spécifique :**
 ```bash
-uv run python src/rank_comparia/export.py --compute-scores --category "creative-writing"
+uv run python src/rank_comparia/cli.py --compute-scores --category "creative-writing"
 ```
 
 **Exécution d'étapes spécifiques :**
 ```bash
 # Télécharger les données puis calculer les scores
-uv run python src/rank_comparia/export.py --download --compute-scores
+uv run python src/rank_comparia/cli.py --download --compute-scores
 
 # Calculer scores et frugalité, puis exporter
-uv run python src/rank_comparia/export.py --compute-scores --compute-frugality --export
+uv run python src/rank_comparia/cli.py --compute-scores --compute-frugality --export
 ```
 
 **Forcer le re-téléchargement des données :**
 ```bash
-uv run python src/rank_comparia/export.py --download --force-download
+uv run python src/rank_comparia/cli.py --download --force-download
 ```
 
 ### Variables d'environnement requises
