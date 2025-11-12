@@ -17,7 +17,7 @@ pipeline = RankingPipeline(
     method="ml",
     include_votes=True,
     include_reactions=True,
-    bootstrap_samples=1000,
+    bootstrap_samples=1,
     mean_how="token",
     export_path=Path("output"),
 )
