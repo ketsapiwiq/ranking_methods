@@ -1,5 +1,9 @@
 name: Pipeline
-on: [push, pull_request]
+on:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 3"
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -21,13 +25,13 @@ jobs:
       run: uv sync
     - name: Install local package in editable mode
       run: uv pip install -e .
-    # - name: Copy models data
-    #   run: cp ./data/models_data.json 
+    - name: Copy models data
+      run: mkdir -p src/data ; cp ./data/models_data.json src/data/models_data.json 
     # - name: Download models data
     #   run: curl https://comparia.beta.gouv.fr/available_models -o ./data/models_data.json
     - name: Exec export script
       run: |
-        uv run python src/rank_comparia/export.py || true
+        cd src && uv run python rank_comparia/export.py || true
       env:
         HF_DATASETS_CACHE: cache
         HF_HUB_CACHE: cache
